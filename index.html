@@ -2128,7 +2128,7 @@ function recalculate() {
     const calcStartStr = calcStart.toISOString().slice(0,10);
     const calcEndStr = calcEnd.toISOString().slice(0,10);
     const totalDays = days360(calcStart, calcEnd);
-    html += `<strong>📋 ${calcLabel}明细</strong> <span style="font-size:11px;">${calcStartStr} ~ ${calcEndStr}（${totalDays}天）</span>`;
+    html += `<strong>${calcLabel}明细</strong> <span style="font-size:11px;">${calcStartStr} ~ ${calcEndStr}（${totalDays}天）</span>`;
   }
 
   if (tenantIncomeDetails.length > 0) {
