@@ -1,0 +1,2534 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>业绩计算器</title>
+<style>
+/* ============================================================
+   CSS DESIGN TOKENS
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* Primary palette — soft indigo */
+  --primary: #4F46E5;
+  --primary-hover: #4338CA;
+  --primary-dark: #3730A3;
+  --primary-light: #EEF2FF;
+  --primary-gradient: linear-gradient(135deg, #4F46E5, #6366F1);
+
+  /* Accent — warm amber */
+  --accent: #F59E0B;
+  --accent-light: #FFFBEB;
+
+  /* Surfaces */
+  --bg: #F4F6FA;
+  --card-bg: #FFFFFF;
+
+  /* Text */
+  --text: #1E293B;
+  --text-secondary: #64748B;
+  --text-muted: #94A3B8;
+  --text-inverse: #FFFFFF;
+
+  /* Borders */
+  --border: #E2E8F0;
+  --border-light: #F1F5F9;
+
+  /* Semantic */
+  --danger: #EF4444;
+  --danger-hover: #DC2626;
+  --danger-light: #FEF2F2;
+  --success: #10B981;
+  --success-hover: #059669;
+  --success-light: #ECFDF5;
+  --warning: #F59E0B;
+  --warning-light: #FFFBEB;
+  --info: #3B82F6;
+  --info-light: #EFF6FF;
+
+  /* Shadows — softer and more layered */
+  --shadow-xs: 0 1px 2px 0 rgba(0,0,0,0.03);
+  --shadow-sm: 0 1px 3px 0 rgba(0,0,0,0.06), 0 1px 2px -1px rgba(0,0,0,0.04);
+  --shadow: 0 2px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 12px -2px rgba(0,0,0,0.08), 0 2px 4px -3px rgba(0,0,0,0.04);
+  --shadow-lg: 0 10px 25px -5px rgba(0,0,0,0.10), 0 4px 8px -6px rgba(0,0,0,0.05);
+
+  /* Radii */
+  --radius: 12px;
+  --radius-sm: 8px;
+  --radius-xs: 5px;
+  --radius-full: 9999px;
+}
+
+/* ============================================================
+   BASE
+   ============================================================ */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', 'Hiragino Sans GB', 'WenQuanYi Micro Hei', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Subtle background texture — very faint noise via repeating gradient */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%234F46E5' fill-opacity='0.015'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ============================================================
+   LAYOUT
+   ============================================================ */
+.container {
+  position: relative;
+  z-index: 1;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 12px 16px 24px;
+}
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+.header {
+  text-align: center;
+  padding: 12px 0 10px;
+}
+.header h1 {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  background: var(--primary-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 2px;
+}
+.header .subtitle {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+/* ============================================================
+   SECTIONS & CARDS
+   ============================================================ */
+.section {
+  margin-bottom: 10px;
+}
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 0 0 4px 10px;
+  border-left: 3px solid var(--primary);
+  color: var(--text);
+  letter-spacing: 0.03em;
+  line-height: 1;
+}
+.section-header .icon { display: none; } /* Remove emoji icons */
+
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.2s ease;
+}
+
+/* ============================================================
+   TOGGLE LINK (for raw text)
+   ============================================================ */
+.toggle-raw-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  padding: 3px 10px;
+  font-size: 12px;
+  color: var(--primary);
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 500;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.toggle-raw-btn:hover {
+  background: var(--primary-light);
+  border-color: var(--primary);
+}
+
+/* ============================================================
+   UPLOAD ZONE
+   ============================================================ */
+.upload-zone {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 14px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: var(--card-bg);
+  position: relative;
+}
+.upload-zone::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, rgba(79,70,229,0.03), rgba(99,102,241,0.01));
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.upload-zone:hover::before,
+.upload-zone.drag-over::before {
+  opacity: 1;
+}
+.upload-zone:hover,
+.upload-zone.drag-over {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px rgba(79,70,229,0.08);
+  transform: translateY(-1px);
+}
+.upload-zone.drag-over {
+  border-color: var(--success);
+  box-shadow: 0 0 0 4px rgba(16,185,129,0.10);
+}
+.upload-zone .icon-upload {
+  font-size: 24px;
+  margin-bottom: 4px;
+  opacity: 0.6;
+  position: relative;
+  z-index: 1;
+}
+.upload-zone .text {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 2px;
+  position: relative;
+  z-index: 1;
+}
+.upload-zone .text strong {
+  color: var(--primary);
+  cursor: pointer;
+  font-weight: 600;
+}
+.upload-zone .hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  position: relative;
+  z-index: 1;
+}
+.upload-zone input[type="file"] { display: none; }
+
+/* ============================================================
+   UPLOAD PREVIEW (thumbnails)
+   ============================================================ */
+.upload-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.upload-thumb {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 2px solid var(--border);
+  box-shadow: var(--shadow-xs);
+  transition: all 0.2s ease;
+}
+.upload-thumb:hover {
+  border-color: var(--primary);
+  box-shadow: var(--shadow-sm);
+}
+.upload-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.upload-thumb .remove {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 18px;
+  height: 18px;
+  background: var(--danger);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+  line-height: 1;
+  z-index: 2;
+}
+.upload-thumb:hover .remove { opacity: 1; }
+
+/* ============================================================
+   UPLOAD COUNT
+   ============================================================ */
+.upload-count {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 6px;
+  text-align: center;
+}
+
+/* ============================================================
+   BUTTONS
+   ============================================================ */
+.btn-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+.btn-primary {
+  background: var(--primary-gradient);
+  color: var(--text-inverse);
+  box-shadow: 0 2px 8px rgba(79,70,229,0.3);
+}
+.btn-primary:hover:not(:disabled) {
+  box-shadow: 0 4px 16px rgba(79,70,229,0.4);
+  transform: translateY(-1px);
+}
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(79,70,229,0.3);
+}
+.btn-secondary {
+  background: var(--card-bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-xs);
+}
+.btn-secondary:hover:not(:disabled) {
+  background: #F8FAFC;
+  border-color: var(--text-muted);
+}
+.btn-small {
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.btn-danger {
+  background: var(--card-bg);
+  color: var(--danger);
+  border: 1px solid #FECACA;
+}
+.btn-danger:hover:not(:disabled) {
+  background: var(--danger-light);
+}
+.btn-success {
+  background: var(--success);
+  color: #fff;
+}
+.btn-success:hover:not(:disabled) {
+  background: var(--success-hover);
+}
+
+/* Full-width primary button for calculate */
+.btn-full {
+  width: 100%;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 700;
+  border-radius: var(--radius);
+  letter-spacing: 0.04em;
+}
+
+/* ============================================================
+   PROGRESS BAR
+   ============================================================ */
+.ocr-progress {
+  display: none;
+  margin-top: 10px;
+}
+.ocr-progress.active { display: block; }
+.progress-bar-wrap {
+  height: 5px;
+  background: #E5E7EB;
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+.progress-bar-fill {
+  height: 100%;
+  background: var(--primary-gradient);
+  border-radius: var(--radius-full);
+  width: 0%;
+  transition: width 0.3s ease;
+}
+.progress-text {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+/* ============================================================
+   RAW TEXT AREA (collapsible)
+   ============================================================ */
+.raw-text-area {
+  width: 100%;
+  min-height: 60px;
+  max-height: 140px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: 'SF Mono', 'Consolas', 'Courier New', monospace;
+  font-size: 12px;
+  color: var(--text);
+  background: #FAFBFC;
+  resize: vertical;
+  line-height: 1.5;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.raw-text-area:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(79,70,229,0.10);
+}
+
+/* ============================================================
+   INFO GRID (landlord card)
+   ============================================================ */
+.info-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.info-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--border-light);
+}
+.info-row:last-child { border-bottom: none; }
+.info-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+  min-width: 70px;
+}
+.info-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+.info-input {
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  font-size: 13px;
+  font-family: inherit;
+  width: 150px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  background: #FAFBFC;
+}
+.info-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(79,70,229,0.10);
+  background: #fff;
+}
+.info-input.wide { width: 200px; }
+.info-input.small { width: 85px; }
+.edit-btn {
+  font-size: 11px;
+  color: var(--primary);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  transition: background 0.2s;
+  font-family: inherit;
+  font-weight: 500;
+}
+.edit-btn:hover { background: var(--primary-light); }
+
+/* ============================================================
+   TENANT CARDS
+   ============================================================ */
+.tenant-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tenant-card {
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--primary);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  background: var(--card-bg);
+  box-shadow: var(--shadow-xs);
+  position: relative;
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+.tenant-card:hover {
+  box-shadow: var(--shadow);
+  border-left-color: var(--primary-dark);
+}
+.tenant-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.tenant-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--primary);
+  letter-spacing: 0.02em;
+}
+.tenant-actions {
+  display: flex;
+  gap: 4px;
+}
+.tenant-field-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+.tenant-field {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+}
+.tenant-field .tf-label {
+  color: var(--text-secondary);
+  white-space: nowrap;
+  font-weight: 500;
+}
+.tenant-field .tf-value {
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* Tenant inline input (manual edit) */
+.ti-input {
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  font-size: 13px;
+  font-family: inherit;
+  width: 110px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  background: #FAFBFC;
+  color: var(--text);
+}
+.date-input {
+  width: 120px;
+  font-family: 'Menlo', 'Consolas', monospace;
+  font-size: 13px;
+}
+.date-input::placeholder {
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 12px;
+}
+.ti-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(79,70,229,0.10);
+  background: #fff;
+}
+.ti-input.wide { width: 150px; }
+.ti-unit {
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  margin-left: 1px;
+}
+
+/* ============================================================
+   ADD TENANT BUTTON
+   ============================================================ */
+.add-tenant-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary);
+  cursor: pointer;
+  background: transparent;
+  transition: all 0.2s;
+  font-family: inherit;
+  letter-spacing: 0.02em;
+}
+.add-tenant-btn:hover {
+  background: var(--primary-light);
+  border-color: var(--primary);
+}
+
+/* ============================================================
+   CONTRACT BOXES (landlord)
+   ============================================================ */
+.contract-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.contract-box {
+  flex: 1;
+  min-width: 280px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  background: #FAFBFC;
+}
+.contract-title {
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--primary);
+  margin-bottom: 4px;
+  letter-spacing: 0.03em;
+}
+
+/* ============================================================
+   MANUAL FIELDS (其他)
+   ============================================================ */
+
+/* Keep old .manual-grid for backward compatibility */
+.manual-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.manual-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.manual-field label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+/* ============================================================
+   RESULTS
+   ============================================================ */
+.results-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.result-item {
+  text-align: center;
+  padding: 10px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  transition: transform 0.2s;
+}
+.result-item:hover {
+  transform: translateY(-2px);
+}
+/* Color-coded backgrounds */
+.result-item.income {
+  background: linear-gradient(180deg, #ECFDF5 0%, #F0FDF4 100%);
+  border-color: #A7F3D0;
+}
+.result-item.expense {
+  background: linear-gradient(180deg, #FEF2F2 0%, #FFF5F5 100%);
+  border-color: #FECACA;
+}
+.result-item.profit {
+  background: linear-gradient(180deg, #EEF2FF 0%, #F0F4FF 100%);
+  border-color: #C7D2FE;
+}
+.result-item .result-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+.result-item .result-value {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+.result-item.income .result-value { color: #059669; }
+.result-item.expense .result-value { color: #DC2626; }
+.result-item.profit .result-value { color: #4F46E5; }
+
+/* Result divider (retained for legacy) */
+.result-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.result-divider::before,
+.result-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.result-divider span {
+  padding: 0 12px;
+  font-weight: 500;
+}
+
+/* ============================================================
+   MESSAGES
+   ============================================================ */
+.msg {
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  margin-top: 6px;
+  display: none;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.msg.show { display: block; }
+.msg-error { background: var(--danger-light); color: #991B1B; border: 1px solid #FECACA; }
+.msg-success { background: var(--success-light); color: #065F46; border: 1px solid #A7F3D0; }
+.msg-info { background: var(--primary-light); color: #1E40AF; border: 1px solid #BFDBFE; }
+.msg-warning { background: var(--warning-light); color: #92400E; border: 1px solid #FDE68A; }
+
+/* ============================================================
+   TOAST
+   ============================================================ */
+.toast {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 9999;
+  padding: 10px 18px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.18);
+  animation: slideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  max-width: 340px;
+  letter-spacing: 0.02em;
+}
+.toast-success { background: var(--success); color: #fff; }
+.toast-error { background: var(--danger); color: #fff; }
+.toast-warning { background: var(--warning); color: #fff; }
+.toast-info { background: var(--primary); color: #fff; }
+@keyframes slideIn {
+  from { transform: translateX(120%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+/* ============================================================
+   MODAL
+   ============================================================ */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(15,23,42,0.5);
+  backdrop-filter: blur(2px);
+  z-index: 9998;
+  align-items: center;
+  justify-content: center;
+}
+.modal-overlay.active {
+  display: flex;
+  animation: fadeIn 0.2s ease;
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.modal {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  padding: 20px;
+  max-width: 440px;
+  width: 92%;
+  box-shadow: 0 25px 80px rgba(0,0,0,0.25);
+  max-height: 85vh;
+  overflow-y: auto;
+  animation: modalSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes modalSlideUp {
+  from { transform: translateY(30px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.modal h3 {
+  font-size: 16px;
+  margin-bottom: 14px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.modal .modal-body { margin-bottom: 16px; }
+.modal .modal-btns { display: flex; gap: 8px; justify-content: flex-end; }
+
+/* ============================================================
+   SPINNER
+   ============================================================ */
+.spinner {
+  display: inline-block;
+  width: 15px; height: 15px;
+  border: 2px solid #E5E7EB;
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 640px) {
+  .container { padding: 12px 12px 36px; }
+  .header h1 { font-size: 22px; }
+  .upload-zone { padding: 12px 12px; }
+  .tenant-field-row { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .tenant-field-row .tenant-field[style*="margin-left:auto"] { margin-left: 0 !important; margin-top: 4px; }
+  .results-grid { grid-template-columns: 1fr; }
+  .btn-row { flex-direction: column; }
+  .btn { justify-content: center; }
+  .manual-inline { flex-direction: column; }
+  .manual-inline .manual-field { min-width: 100%; }
+  #detail360Content { word-break: break-all; font-size: 11px; }
+  .info-row { flex-wrap: nowrap !important; overflow-x: auto; gap: 6px 8px !important; }
+  .info-row::-webkit-scrollbar { display: none; }
+  .tenant-field-row { gap: 6px 8px !important; }
+  .ti-input { padding: 4px 6px; font-size: 12px; }
+  .ti-input.wide { width: 100% !important; }
+  .date-input { min-width: 0 !important; font-size: 12px; padding: 4px 6px; }
+  #ldFreeDays1, #ldFreeDays2 { width: 55px !important; }
+  #ldStartDate1, #ldEndDate1, #ldStartDate2, #ldEndDate2 { width: 101px !important; }
+  .contract-box { min-width: 100% !important; }
+  .tenant-field .date-input { width: 87px !important; }
+  /* 租客卡片手机端布局：2列 + 租期独立行 */
+  .tenant-card > div[style*="grid-template-columns:1fr auto 1fr auto"] {
+    grid-template-columns: 1fr 110px !important;
+  }
+  .tenant-card > div[style*="grid-template-columns:1fr auto 1fr auto"] > div:nth-child(3),
+  .tenant-card > div[style*="grid-template-columns:1fr auto 1fr auto"] > div:nth-child(4) {
+    grid-column: span 1 !important;
+  }
+  .tenant-card > div[style*="flex;align-items:center"] {
+    flex-wrap: wrap !important;
+  }
+}
+
+/* Image Viewer */
+.image-viewer-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.35);
+  z-index: 9999;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 24px;
+  cursor: default;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+.image-viewer-overlay.active { opacity: 1; pointer-events: auto; }
+.image-viewer-overlay img {
+  max-width: 55vw;
+  max-height: 60vh;
+  object-fit: contain;
+  border-radius: 6px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+  cursor: pointer;
+  transition: max-width 0.2s ease, max-height 0.2s ease;
+}
+.image-viewer-overlay img.zoomed {
+  max-width: 90vw;
+  max-height: 90vh;
+}
+.image-viewer-overlay .iv-close {
+  position: absolute;
+  top: 16px; right: 20px;
+  font-size: 26px;
+  color: #fff;
+  cursor: pointer;
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+.image-viewer-overlay .iv-close:hover { background: rgba(255,255,255,0.3); }
+.image-viewer-overlay .iv-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 32px;
+  color: #fff;
+  cursor: pointer;
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+  user-select: none;
+}
+.image-viewer-overlay .iv-nav:hover { background: rgba(255,255,255,0.35); }
+.image-viewer-overlay .iv-nav.prev { left: 16px; }
+.image-viewer-overlay .iv-nav.next { right: 16px; }
+.image-viewer-overlay .iv-nav.hidden { display: none; }
+.image-viewer-overlay .iv-counter {
+  position: absolute;
+  bottom: 20px;
+  color: rgba(255,255,255,0.6);
+  font-size: 13px;
+  letter-spacing: 0.3px;
+}
+
+/* ============================================================
+   HISTORY
+   ============================================================ */
+.history-list { display: flex; flex-direction: column; gap: 6px; }
+.history-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--card-bg); cursor: pointer; transition: box-shadow 0.2s;
+}
+.history-item:hover { box-shadow: var(--shadow-sm); }
+.history-info { flex: 1; min-width: 0; }
+.history-info .hi-title { font-size: 13px; font-weight: 600; color: var(--primary); }
+.history-info .hi-date { font-size: 11px; color: var(--text-muted); }
+.history-info .hi-result { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+.history-profit { font-size: 14px; font-weight: 700; margin: 0 10px; white-space: nowrap; }
+.history-profit.pos { color: var(--success); }
+.history-profit.neg { color: var(--danger); }
+.history-del { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 16px; padding: 2px 6px; border-radius: 4px; }
+.history-del:hover { color: var(--danger); background: var(--danger-light); }
+.history-empty { text-align: center; color: var(--text-muted); font-size: 13px; padding: 16px; }
+.history-status { font-size: 11px; color: var(--text-muted); text-align: center; padding: 4px; }
+.history-status.ok { color: var(--success); }
+.history-status.err { color: var(--danger); }
+
+/* ============================================================
+   LOCK TOGGLE
+   ============================================================ */
+.lock-toggle { position: relative; display: inline-block; width: 32px; height: 18px; cursor: pointer; }
+.lock-toggle input { display: none; }
+.lock-slider {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  background: #ccc; border-radius: 18px; transition: 0.3s;
+}
+.lock-slider::before {
+  content: '';
+  position: absolute; left: 2px; bottom: 2px;
+  width: 14px; height: 14px; background: #fff; border-radius: 50%; transition: 0.3s;
+}
+.lock-toggle input:checked + .lock-slider { background: var(--primary); }
+.lock-toggle input:checked + .lock-slider::before { transform: translateX(14px); }
+
+
+
+
+/* Disabled form fields when locked */
+input:disabled, textarea:disabled, select:disabled {
+  opacity: 0.5; cursor: not-allowed; background: #f0f0f0 !important;
+}
+button:disabled {
+  opacity: 0.4; cursor: not-allowed;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <h1>业绩计算器 <span style="font-size:12px;color:var(--text-muted);font-weight:400;">v1.10</span></h1>
+  </div>
+
+  <!-- Section: Upload -->
+  <div class="section">
+    <div class="section-header">截图上传</div>
+    <div class="card">
+      <div id="uploadZone" class="upload-zone">
+        <div class="icon-upload">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+        </div>
+        <div class="text">拖拽截图到此处，或 <strong>点击选择</strong></div>
+        <div class="hint">Ctrl+V 粘贴 · 支持多张（房东+租客）</div>
+        <input type="file" id="fileInput" accept="image/png,image/jpeg,image/jpg" multiple>
+      </div>
+      <div id="uploadPreview" class="upload-preview"></div>
+      <div id="uploadCount" class="upload-count">已上传: <strong>0</strong> 张</div>
+      <div class="btn-row">
+        <button id="btnOcr" class="btn btn-primary" disabled onclick="startOcrAll()">开始识别</button>
+        <button id="btnClear" class="btn btn-secondary" onclick="clearAllImages()">清空图片</button>
+      </div>
+      <div id="ocrProgress" class="ocr-progress">
+        <div class="progress-bar-wrap"><div id="progressBar" class="progress-bar-fill"></div></div>
+        <div id="progressText" class="progress-text">准备中...</div>
+      </div>
+      <div id="ocrMsg" class="msg"></div>
+    </div>
+  </div>
+
+  <!-- Section: Raw OCR Text (collapsible) -->
+  <div class="section">
+    <div class="section-header">
+      <span>识别结果</span>
+      <button id="toggleRawBtn" class="toggle-raw-btn" onclick="toggleRawText()">查看原始文本</button>
+    </div>
+    <div id="rawTextSection" style="display:none;">
+      <div class="card">
+        <textarea id="rawText" class="raw-text-area" placeholder="OCR识别原始文本将显示在这里..."></textarea>
+        <div style="margin-top:8px;font-size:12px;color:var(--text-secondary);">
+          可手动编辑文本后点击重新解析修正识别结果
+        </div>
+        <button class="btn btn-secondary btn-small" style="margin-top:8px;" onclick="reparseFromText()">重新解析</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section: Landlord Info -->
+  <div class="section">
+    <div class="section-header">房东信息</div>
+    <div class="card" id="landlordCard">
+      <div class="info-grid">
+        <div class="info-row" style="flex-wrap:wrap;gap:4px 6px;align-items:center;">
+          <span class="info-label" style="min-width:auto;white-space:nowrap;">房源编号</span>
+          <input class="info-input" id="ldPropertyId" placeholder="自动识别" style="width:80px;">
+          <label style="font-size:10px;color:var(--accent);display:flex;align-items:center;gap:2px;cursor:pointer;white-space:nowrap;margin-left:auto;">
+            <input type="checkbox" id="firstQuarter" onchange="toggleFirstQuarter()" style="cursor:pointer;">
+            首季度
+          </label>
+        </div>
+        <div class="contract-row">
+          <!-- Contract 1 -->
+          <div class="contract-box">
+            <div class="contract-title">合同一</div>
+            <div class="info-row" style="flex-wrap:wrap;gap:4px 6px;align-items:center;">
+              <span class="info-label" style="min-width:auto;white-space:nowrap;">收房价格</span>
+              <input class="info-input" id="ldRent1" type="number" placeholder="0" style="width:70px;">
+              <span class="info-label" style="min-width:auto;white-space:nowrap;">免租期</span>
+              <input class="info-input" id="ldFreeDays1" type="text" inputmode="numeric" placeholder="0" list="freeDaysList" style="width:55px;">
+              <datalist id="freeDaysList">
+                <option value="30">30天</option>
+                <option value="45">45天</option>
+              </datalist>
+              <span style="font-size:12px;color:var(--text-secondary);white-space:nowrap;">天</span>
+            </div>
+            <div class="info-row" style="flex-wrap:wrap;gap:4px 6px;align-items:center;">
+              <span class="info-label" style="min-width:auto;white-space:nowrap;">租期</span>
+              <input class="info-input date-input" id="ldStartDate1" type="text" placeholder="起始" maxlength="10" onblur="this.value=normalizeDateInput(this.value)">
+              <span style="font-size:12px;color:var(--text-secondary);">~</span>
+              <input class="info-input date-input" id="ldEndDate1" type="text" placeholder="结束" maxlength="10" onblur="this.value=normalizeDateInput(this.value);syncEndDates()">
+            </div>
+          </div>
+          <!-- Contract 2 -->
+          <div class="contract-box" id="contract2Box" style="display:none;">
+            <div class="contract-title">合同二 <span style="font-size:11px;color:var(--danger);cursor:pointer;font-weight:400;" onclick="removeContract2()">✕ 移除</span></div>
+            <div class="info-row" style="flex-wrap:wrap;gap:4px 6px;align-items:center;">
+              <span class="info-label" style="min-width:auto;white-space:nowrap;">收房价格</span>
+              <input class="info-input" id="ldRent2" type="number" placeholder="0" style="width:70px;">
+              <span class="info-label" style="min-width:auto;white-space:nowrap;">免租期</span>
+              <input class="info-input" id="ldFreeDays2" type="text" inputmode="numeric" placeholder="0" list="freeDaysList" style="width:55px;">
+              <span style="font-size:12px;color:var(--text-secondary);white-space:nowrap;">天</span>
+            </div>
+            <div class="info-row" style="flex-wrap:wrap;gap:4px 6px;align-items:center;">
+              <span class="info-label" style="min-width:auto;white-space:nowrap;">租期</span>
+              <input class="info-input date-input" id="ldStartDate2" type="text" placeholder="起始" maxlength="10" onblur="this.value=normalizeDateInput(this.value)">
+              <span style="font-size:12px;color:var(--text-secondary);">~</span>
+              <input class="info-input date-input" id="ldEndDate2" type="text" placeholder="结束" maxlength="10" onblur="this.value=normalizeDateInput(this.value)">
+            </div>
+          </div>
+        </div>
+        <div style="text-align:center;padding:4px 0 0;">
+          <button class="btn btn-small btn-secondary" id="addContract2Btn" onclick="showContract2()" style="font-size:11px;padding:3px 12px;">+ 第二份合同</button>
+        </div>
+        <div class="info-row" style="flex-wrap:wrap;gap:4px 6px;align-items:center;">
+          <label style="font-size:10px;color:var(--primary);display:flex;align-items:center;gap:2px;cursor:pointer;white-space:nowrap;">
+            <input type="checkbox" id="syncEndDate" onchange="syncEndDates()" style="cursor:pointer;">
+            同步到期日
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section: Tenant Info -->
+  <div class="section">
+    <div class="section-header" style="display:flex;justify-content:space-between;align-items:center;">
+      <span>租客信息</span>
+      <span id="tenantTotalRent" style="font-size:12px;font-weight:400;color:var(--text-secondary);"></span>
+    </div>
+    <div class="card">
+      <div id="tenantList" class="tenant-list">
+        <!-- Tenant cards inserted here -->
+      </div>
+      <button class="add-tenant-btn" onclick="addTenant()" style="margin-top:14px;">
+        + 添加租客
+      </button>
+    </div>
+  </div>
+
+  <!-- Section: Results -->
+  <div class="section">
+    <div class="section-header">计算结果</div>
+    <div class="card">
+      <div class="results-grid">
+        <div class="result-item diff">
+          <div class="result-label">月差价</div>
+          <div class="result-value" id="resDiff" style="color:var(--text-secondary);">待计算</div>
+        </div>
+        <div class="result-item income">
+          <div class="result-label">总收入</div>
+          <div class="result-value" id="resIncome" style="color:var(--text-secondary);">待计算</div>
+        </div>
+        <div class="result-item expense">
+          <div class="result-label">总支出</div>
+          <div class="result-value" id="resExpense" style="color:var(--text-secondary);">待计算</div>
+        </div>
+        <div class="result-item profit">
+          <div class="result-label">净利润</div>
+          <div class="result-value" id="resProfit" style="color:var(--text-secondary);">待计算</div>
+        </div>
+      </div>
+      <div style="text-align:center;margin-top:14px;">
+        <button class="btn btn-primary btn-full" onclick="recalculate()">计算净利润</button>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">确认信息无误后，点击此按钮计算结果</div>
+      </div>
+      <div id="detail360" style="margin-top:10px;padding:8px 12px;background:#F8FAFC;border-radius:8px;font-size:12px;color:var(--text-secondary);display:none;line-height:1.5;max-height:400px;overflow-y:auto;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+          <span style="font-weight:600;color:var(--text-primary);">计算明细</span>
+          <button class="btn btn-small" onclick="copyDetail()" style="font-size:11px;padding:2px 8px;border:1px solid var(--border);background:#fff;color:var(--primary);border-radius:4px;cursor:pointer;">复制</button>
+        </div>
+        <div id="detail360Content"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reset Button -->
+  <div style="text-align:center;margin-bottom:12px;">
+    <button class="btn btn-secondary" onclick="resetAll()" style="color:var(--danger);border-color:#fecaca;">重置全部 · 算下一套</button>
+  </div>
+
+  <!-- Section: History -->
+  <div class="section">
+    <div class="section-header" style="display:flex;justify-content:space-between;align-items:center;">
+      <span>历史记录</span>
+      <span style="display:flex;align-items:center;gap:8px;">
+        <label class="lock-toggle" title="锁定后无法修改数据">
+          <input type="checkbox" id="lockToggle" onchange="toggleLock()">
+          <span class="lock-slider"></span>
+        </label>
+        <span id="lockLabel" style="font-size:11px;color:var(--text-muted);">锁定</span>
+        <span id="historyStatus" class="history-status"></span>
+      </span>
+    </div>
+    <div class="card" style="padding-bottom:8px;">
+      <input type="text" id="historySearch" placeholder="搜索房源编号..." oninput="searchHistory()" style="width:100%;margin-bottom:8px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;outline:none;">
+      <div id="historyList" class="history-list">
+        <div class="history-empty">加载中...</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Image Viewer -->
+<div class="image-viewer-overlay" onclick="closeImageViewer()">
+  <span class="iv-close" onclick="closeImageViewer()">&times;</span>
+  <span class="iv-nav prev" onclick="event.stopPropagation();navImage(-1)">&lsaquo;</span>
+  <span class="iv-nav next" onclick="event.stopPropagation();navImage(1)">&rsaquo;</span>
+  <img src="" alt="查看截图" onclick="event.stopPropagation();this.classList.toggle('zoomed')">
+  <div class="iv-counter"></div>
+</div>
+
+<script>
+// ========== STATE ==========
+let uploadedFiles = [];        // Array of { file: File, previewUrl: string }
+let ocrResults = [];          // Array of { text: string, pageType: string }
+let tenants = [];             // Array of tenant objects
+let tenantCounter = 0;        // Auto-increment label counter (A, B, C...)
+let recalcTimer = null;       // Timer for scheduled recalculation
+
+// ========== INIT ==========
+document.addEventListener('DOMContentLoaded', () => {
+  setupUploadZone();
+  updateOcrButton();
+  updateUploadCount();
+  renderTenants();
+  // Keyboard navigation for image viewer
+  document.addEventListener('keydown', (e) => {
+    const overlay = document.querySelector('.image-viewer-overlay');
+    if (!overlay.classList.contains('active')) return;
+    if (e.key === 'ArrowLeft') navImage(-1);
+    else if (e.key === 'ArrowRight') navImage(1);
+    else if (e.key === 'Escape') closeImageViewer();
+  });
+});
+
+// ========== UPLOAD ZONE ==========
+function setupUploadZone() {
+  const zone = document.getElementById('uploadZone');
+  const input = document.getElementById('fileInput');
+
+  zone.addEventListener('click', () => input.click());
+  zone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    zone.classList.add('drag-over');
+  });
+  zone.addEventListener('dragleave', () => {
+    zone.classList.remove('drag-over');
+  });
+  zone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    handleFiles(Array.from(e.dataTransfer.files));
+  });
+  input.addEventListener('change', () => {
+    handleFiles(Array.from(input.files));
+    input.value = '';
+  });
+
+  // Paste support: Ctrl+V to paste screenshot from clipboard
+  document.addEventListener('paste', (e) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        const blob = item.getAsFile();
+        if (blob) {
+          handleFiles([blob]);
+          showToast('已从剪贴板粘贴截图', 'info');
+        }
+        break;
+      }
+    }
+  });
+}
+
+function handleFiles(files) {
+  const imageFiles = files.filter(f => f.type.startsWith('image/'));
+  if (imageFiles.length === 0) {
+    showToast('请选择图片文件（.png .jpg .jpeg）', 'warning');
+    return;
+  }
+
+  imageFiles.forEach(file => {
+    uploadedFiles.push({
+      file: file,
+      previewUrl: URL.createObjectURL(file)
+    });
+  });
+  updateUploadPreview();
+  updateUploadCount();
+  updateOcrButton();
+  showToast(`已添加 ${imageFiles.length} 张图片`, 'success');
+}
+
+function updateUploadPreview() {
+  const container = document.getElementById('uploadPreview');
+  container.innerHTML = uploadedFiles.map((item, idx) => `
+    <div class="upload-thumb">
+      <img src="${item.previewUrl}" alt="截图 ${idx + 1}" style="cursor:pointer" onclick="viewImage(${idx})">
+      <button class="remove" onclick="removeImage(${idx})" title="删除">&times;</button>
+    </div>
+  `).join('');
+}
+
+function updateUploadCount() {
+  document.getElementById('uploadCount').innerHTML = `已上传: <strong>${uploadedFiles.length}</strong> 张`;
+}
+
+function updateOcrButton() {
+  const btn = document.getElementById('btnOcr');
+  btn.disabled = uploadedFiles.length === 0;
+}
+
+function clearAllImages() {
+  uploadedFiles.forEach(item => URL.revokeObjectURL(item.previewUrl));
+  uploadedFiles = [];
+  updateUploadPreview();
+  updateUploadCount();
+  updateOcrButton();
+  document.getElementById('ocrProgress').classList.remove('active');
+  showToast('已清空所有图片', 'info');
+}
+
+function removeImage(index) {
+  URL.revokeObjectURL(uploadedFiles[index].previewUrl);
+  uploadedFiles.splice(index, 1);
+  updateUploadPreview();
+  updateUploadCount();
+  updateOcrButton();
+}
+
+// ========== RAW TEXT TOGGLE ==========
+function toggleRawText() {
+  const section = document.getElementById('rawTextSection');
+  const btn = document.getElementById('toggleRawBtn');
+  if (section.style.display === 'none' || !section.style.display) {
+    section.style.display = 'block';
+    btn.textContent = '隐藏原始文本';
+  } else {
+    section.style.display = 'none';
+    btn.textContent = '查看原始文本';
+  }
+}
+
+// ========== OCR (ocr.space - Free API) ==========
+async function startOcrAll() {
+  if (uploadedFiles.length === 0) {
+    showToast('请先上传截图', 'warning');
+    return;
+  }
+
+  const progress = document.getElementById('ocrProgress');
+  const progressBar = document.getElementById('progressBar');
+  const progressText = document.getElementById('progressText');
+  const msgDiv = document.getElementById('ocrMsg');
+
+  progress.classList.add('active');
+  msgDiv.className = 'msg';
+  document.getElementById('btnOcr').disabled = true;
+  document.getElementById('rawText').value = '';
+  ocrResults = [];
+
+  try {
+    let allText = '';
+    const total = uploadedFiles.length;
+
+    for (let i = 0; i < total; i++) {
+      progressText.textContent = `正在识别第 ${i + 1}/${total} 张图片...`;
+      progressBar.style.width = `${(i / total) * 100}%`;
+
+      const file = uploadedFiles[i].file;
+      const base64 = await fileToBase64(file);
+
+      const formData = new FormData();
+      formData.append('base64Image', base64);
+      formData.append('language', 'chs'); // Chinese Simplified
+      formData.append('isOverlayRequired', 'false');
+      formData.append('OCREngine', '2'); // Engine 2 is better for Chinese
+
+      const response = await fetch('https://api.ocr.space/parse/image', {
+        method: 'POST',
+        headers: { 'apikey': 'helloworld' }, // Free public key
+        body: formData
+      });
+
+      const data = await response.json();
+
+      if (data.ParsedResults && data.ParsedResults.length > 0) {
+        const text = data.ParsedResults[0].ParsedText || '';
+        if (text.trim()) {
+          const pageType = detectPageType(text);
+          ocrResults.push({ text: text.trim(), pageType });
+          allText += `\n--- 截图 ${i + 1} (${pageType === 'landlord' ? '房东页' : pageType === 'tenant' ? '租客页' : '未知'}) ---\n${text.trim()}\n`;
+        } else {
+          showToast(`第 ${i + 1} 张截图未识别到文字，请检查图片清晰度`, 'warning');
+        }
+      }
+    }
+
+    if (ocrResults.length === 0) {
+      msgDiv.className = 'msg msg-warning show';
+      msgDiv.textContent = '未能从截图中识别到文字，请检查图片清晰度后重试。';
+    } else {
+      document.getElementById('rawText').value = allText.trim();
+      // Auto-hide raw text section when OCR succeeds
+      const rawSection = document.getElementById('rawTextSection');
+      const toggleBtn = document.getElementById('toggleRawBtn');
+      rawSection.style.display = 'none';
+      toggleBtn.textContent = '查看原始文本';
+      parseAllResults();
+      msgDiv.className = 'msg msg-success show';
+      msgDiv.textContent = `识别完成！共处理 ${ocrResults.length} 张图片。请检查识别结果并修正。`;
+    }
+
+    progressBar.style.width = '100%';
+    progressText.textContent = '识别完成！';
+
+  } catch (err) {
+    console.error('OCR error:', err);
+    msgDiv.className = 'msg msg-error show';
+    let errMsg = err.message || '未知错误';
+    if (errMsg.includes('Failed to fetch') || errMsg.includes('NetworkError')) {
+      errMsg = '网络错误：无法连接OCR服务器，请检查网络连接。';
+    }
+    msgDiv.textContent = `OCR识别失败: ${errMsg}`;
+    progressText.textContent = '识别失败';
+    // Still update preview to show attempted files
+    updateUploadPreview();
+  } finally {
+    document.getElementById('btnOcr').disabled = false;
+    setTimeout(() => {
+      progress.classList.remove('active');
+    }, 2000);
+  }
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result); // data:image/...;base64,...
+    reader.onerror = () => reject(new Error('文件读取失败'));
+    reader.readAsDataURL(file);
+  });
+}
+
+// ========== SIMPLE ROBUST PARSING ==========
+// Strategy: find label text, then extract the first number after it
+// This is much more tolerant of OCR noise than complex regex
+
+function normalizeOcrText(text) {
+  if (!text) return '';
+  return text
+    .replace(/\r\n/g, '\n')
+    .replace(/\n{2,}/g, '\n')
+    .replace(/[：:]/g, '：')
+    .replace(/[（(]/g, '（')
+    .replace(/[）)]/g, '）')
+    .replace(/[【\[]/g, '【')
+    .replace(/[】\]]/g, '】');
+}
+
+function afterLabel(text, label) {
+  // Find label in text, return everything after it
+  const idx = text.indexOf(label);
+  if (idx === -1) return '';
+  // Get up to 100 chars after the label
+  return text.substring(idx + label.length, idx + label.length + 100);
+}
+
+function extractNumberAfter(text, label) {
+  const after = afterLabel(text, label);
+  if (!after) { return '0'; }
+  // Remove currency symbols and common noise, keep digits and dots
+  const cleaned = after.replace(/[¥￥,，\s元%]/g, ' ').replace(/\s+/g, ' ');
+  const m = cleaned.match(/(\d+(?:\.\d+)?)/);
+
+  return m ? m[1] : '0';
+}
+
+function extractNameAfter(text, label) {
+  const after = afterLabel(text, label);
+  if (!after) return '';
+  const m = after.match(/[\s：:]*([^\s\d：:]{2,6})/);
+  return m ? m[1].trim() : '';
+}
+
+function extractDateAfter(text, label) {
+  // 先精确匹配
+  let idx = text.indexOf(label);
+  // 精确匹配不到时尝试模糊匹配（解决 OCR 错别字）
+  if (idx === -1 && label.length >= 3) {
+    idx = fuzzyIndexOf(text, label, 1);
+  }
+  if (idx === -1) return '';
+  const after = text.substring(idx + label.length, idx + label.length + 120).replace(/\s+/g, ' ');
+  const m = after.match(/(\d{4})[\s\/\-\.年]*(\d{1,2})[\s\/\-\.月]*(\d{1,2})/);
+  if (m) {
+    return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
+  }
+  return '';
+}
+
+function extractPaymentMethod(text) {
+  const methods = ['季付', '月付', '年付', '半年付', '季','月','年'];
+  for (const m of methods) {
+    if (text.includes(m)) return m;
+  }
+  return '';
+}
+
+// ========== PAGE TYPE DETECTION ==========
+function detectPageType(text) {
+  const n = normalizeOcrText(text);
+  // 优先检测租客关键词（租客页面也有"收房价格"，不能先检测房东）
+  if (n.includes('租客信息') || n.includes('出房价格')) return 'tenant';
+  if (n.includes('租客姓名') || n.includes('租客意向')) return 'tenant';
+  if (n.includes('房东信息') || n.includes('房东姓名')) return 'landlord';
+  if (n.includes('收房价格') && !n.includes('出房价格')) return 'landlord';
+  return 'unknown';
+}
+
+// ========== LANDLORD PARSING ==========
+function parseLandlordData(text) {
+  const n = normalizeOcrText(text);
+  return {
+    propertyId: extractPropertyId(n),
+    name: extractNameAfter(n, '房东姓名') || extractNameAfter(n, '业主') || extractNameAfter(n, '房东'),
+    rentPrice: extractNumberAfter(n, '收房价格') || extractNumberAfter(n, '收房价'),
+    startDate: extractDateAfter(n, '开始') || extractDateAfter(n, '生效') || extractDateAfter(n, '起租'),
+    endDate: extractDateAfter(n, '结束') || extractDateAfter(n, '到期') || extractDateAfter(n, '截止') || extractDateAfter(n, '为止'),
+    paymentMethod: extractPaymentMethod(n)
+  };
+}
+
+function extractPropertyId(text) {
+  const idx = text.indexOf('房源编号');
+  if (idx === -1) return '';
+  const after = text.substring(idx, idx + 80);
+  // Take everything after the label until newline 
+  let m = after.match(/房源编号[：:]*\s*([^\n\r]+)/);
+  if (m) {
+    let id = m[1].trim();
+    // Remove trailing noise (punctuation)
+    id = id.replace(/[，,。.]$/, '');
+    return id;
+  }
+  return '';
+}
+
+// ========== TENANT PARSING ==========
+function parseTenantData(text) {
+  const n = normalizeOcrText(text);
+
+
+  // Extract tenant label from "租客信息【A】" or similar
+  let label = '';
+  const labelMatch = n.match(/租客信息[【（]\s*([A-Za-z0-9一二三四五六七八九十]+)\s*[】）]/);
+  if (labelMatch) label = labelMatch[1];
+
+  // Extract cleaning fee - handle both formats:
+  // 1. Inline: "卫管费 ¥706.00元" → extractNumberAfter works
+  // 2. Grouped: labels block then values block → need positional matching
+  let cleaningFee = 0;
+  // Try each possible label via extractNumberAfter (works for inline format)
+  const feeLabels = ['卫管费', '卫生费', '管理费', '卫生管理费'];
+  for (const lbl of feeLabels) {
+    const val = parseFloat(extractNumberAfter(n, lbl));
+
+    if (val > 0) { cleaningFee = val; break; }
+  }
+  // Fallback for grouped format: labels and ¥ amounts on separate lines
+  // Strategy: locate "付费信息" block, collect labels then amounts, pair by position
+  if (cleaningFee === 0) {
+    const feeSectionIdx = n.indexOf('付费信息');
+    if (feeSectionIdx >= 0) {
+      const feeSection = n.substring(feeSectionIdx, feeSectionIdx + 300);
+      // Collect fee labels in order (Chinese lines before any ¥ amount)
+      const feeLabelsInSection = [];
+      const lines = feeSection.split('\n');
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        if (/^[¥￥]/.test(trimmed)) break;
+        // Is this a fee label (Chinese chars without ¥)?
+        if (/^[\u4e00-\u9fff]+$/.test(trimmed) && trimmed.length >= 2 && trimmed !== '付费信息') {
+          feeLabelsInSection.push(trimmed);
+        }
+      }
+
+      // If labels found, collect ¥ amounts from the rest of feeSection
+      if (feeLabelsInSection.length > 0) {
+        const amtRe = /[¥￥]\s*(\d+(?:\.\d+)?)\s*元?/g;
+        const allAmounts = [];
+        let m2;
+        while ((m2 = amtRe.exec(feeSection)) !== null) {
+          allAmounts.push(parseFloat(m2[1]));
+        }
+        // Try 卫管费 first, then 管理费 - match by label position
+        for (const target of ['卫管费', '卫生费', '管理费']) {
+          const idx = feeLabelsInSection.indexOf(target);
+
+          if (idx >= 0 && idx < allAmounts.length && allAmounts[idx] > 0) {
+            cleaningFee = allAmounts[idx];
+            break;
+          }
+        }
+        // Last resort: use last non-zero amount in fee section
+        if (cleaningFee === 0 && allAmounts.length > 0) {
+          for (let i = allAmounts.length - 1; i >= 0; i--) {
+            if (allAmounts[i] > 0) { cleaningFee = allAmounts[i]; break; }
+          }
+        }
+      }
+    }
+  }
+
+  const rentVal = extractNumberAfter(n, '出房价格') || extractNumberAfter(n, '出房价');
+
+
+  return {
+    name: extractNameAfter(n, '租客姓名') || extractNameAfter(n, '客户姓名') || (label ? '租客' + label : ''),
+    label: label || '',
+    rent: rentVal,
+    cleaningFee: cleaningFee.toString(),
+    startDate: extractTenantDate(n),
+    endDate: extractTenantEndDate(n)
+  };
+}
+
+// 模糊匹配：允许最多 maxDist 个字符差异（解决 OCR 错别字问题）
+function fuzzyIndexOf(text, target, maxDist) {
+  if (maxDist === undefined) maxDist = 1;
+  const exact = text.indexOf(target);
+  if (exact !== -1) return exact;
+  const tl = target.length;
+  for (let i = 0; i <= text.length - tl; i++) {
+    let dist = 0;
+    for (let j = 0; j < tl; j++) {
+      if (text[i + j] !== target[j]) dist++;
+      if (dist > maxDist) break;
+    }
+    if (dist <= maxDist && dist > 0) return i;
+  }
+  return -1;
+}
+
+function extractTenantDate(text) {
+  // 搜索多种可能的开始时间标签（支持模糊匹配，OCR 常见错字也能识别）
+  const labels = ['开始时间', '合同开始', '租期开始', '租期起始', '起始时间', '开始', '起始'];
+  let idx = -1;
+  for (const lbl of labels) {
+    idx = fuzzyIndexOf(text, lbl, 1);
+    if (idx !== -1) break;
+  }
+  if (idx === -1) {
+    // 也尝试从"租期"标签提取（格式如：租期 2024-01-01 ~ 2024-12-31）
+    const periodIdx = text.indexOf('租期');
+    if (periodIdx !== -1) {
+      const after = text.substring(periodIdx, periodIdx + 100).replace(/\s+/g, ' ');
+      const m = after.match(/(\d{4})[\s\/\-\.年]*(\d{1,2})[\s\/\-\.月]*(\d{1,2})/);
+      if (m) return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
+    }
+    return '';
+  }
+  const after = text.substring(idx, idx + 120).replace(/\s+/g, ' ');
+  const m = after.match(/(\d{4})[\s\/\-\.年]*(\d{1,2})[\s\/\-\.月]*(\d{1,2})/);
+  if (m) return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
+  return '';
+}
+
+function extractTenantEndDate(text) {
+  // 搜索多种可能的结束时间标签（支持模糊匹配）
+  const labels = ['结束时间', '合同结束', '租期结束', '截止时间', '到期', '结束'];
+  let idx = -1;
+  for (const lbl of labels) {
+    idx = fuzzyIndexOf(text, lbl, 1);
+    if (idx !== -1) break;
+  }
+  if (idx === -1) {
+    // 从"租期"标签提取结束日期（"1年"这种不匹配，但"至2024-12-31"可以）
+    const periodIdx = text.indexOf('租期');
+    if (periodIdx !== -1) {
+      const after = text.substring(periodIdx, periodIdx + 150).replace(/\s+/g, ' ');
+      // 找第二个日期（第一个是开始日期，第二个是结束日期）
+      const dates = [];
+      const re = /(\d{4})[\s\/\-\.年]*(\d{1,2})[\s\/\-\.月]*(\d{1,2})/g;
+      let m;
+      while ((m = re.exec(after)) !== null) {
+        dates.push(`${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`);
+      }
+      if (dates.length >= 2) return dates[dates.length - 1];
+    }
+    return '';
+  }
+  const after = text.substring(idx, idx + 120).replace(/\s+/g, ' ');
+  const m = after.match(/(\d{4})[\s\/\-\.年]*(\d{1,2})[\s\/\-\.月]*(\d{1,2})/);
+  if (m) return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
+  return '';
+}
+
+// ========== PARSE AMOUNT ==========
+function parseAmount(val) {
+  if (val === undefined || val === null || val === '') return 0;
+  const num = typeof val === 'number' ? val : parseFloat(String(val).replace(/[¥￥,，\s元]/g, ''));
+  return isNaN(num) ? 0 : num;
+}
+
+// ========== NUMBER FORMAT ==========
+function fmt(num) {
+  if (typeof num !== 'number' || isNaN(num)) return '0';
+  return num.toLocaleString('zh-CN', { maximumFractionDigits: 0 });
+}
+// 日租金保留小数
+function fmtRate(num) {
+  if (typeof num !== 'number' || isNaN(num)) return '0';
+  return num.toLocaleString('zh-CN', { maximumFractionDigits: 2 });
+}
+
+function normalizeDate(str) {
+  if (!str || str === 'undefined' || str === 'null') return '';
+  const m = str.match(/(\d{4})[\s\/\-\.年]*(\d{1,2})[\s\/\-\.月]*(\d{1,2})/);
+  if (m) return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
+  return '';
+}
+
+// ========== PARSE ALL RESULTS ==========
+function parseAllResults() {
+  let landlordFound = false;
+  let tenantCount = 0;
+
+  for (const result of ocrResults) {
+    const text = result.text;
+    const pageType = result.pageType;
+
+    if (pageType === 'landlord' && !landlordFound) {
+      const data = parseLandlordData(text);
+      if (data.rentPrice > 0) {
+        if (data.propertyId) document.getElementById('ldPropertyId').value = data.propertyId;
+        document.getElementById('ldRent1').value = parseAmount(data.rentPrice);
+        if (data.startDate) document.getElementById('ldStartDate1').value = data.startDate;
+        if (data.endDate) document.getElementById('ldEndDate1').value = data.endDate;
+        landlordFound = true;
+      }
+    } else if (pageType === 'tenant') {
+      const data = parseTenantData(text);
+      addTenantFromData(data);
+      tenantCount++;
+    }
+  }
+
+  // Second pass: for unknown pages, try both parsers
+  if (!landlordFound || tenantCount === 0) {
+    for (const result of ocrResults) {
+      if (result.pageType !== 'unknown') continue;
+      const text = result.text;
+
+      if (!landlordFound && /收房|房东|收价/.test(text)) {
+        const data = parseLandlordData(text);
+        if (parseFloat(data.rentPrice) > 0) {
+          if (data.propertyId) document.getElementById('ldPropertyId').value = data.propertyId;
+          document.getElementById('ldRent1').value = parseAmount(data.rentPrice);
+          if (data.startDate) document.getElementById('ldStartDate1').value = data.startDate;
+          if (data.endDate) document.getElementById('ldEndDate1').value = data.endDate;
+          landlordFound = true;
+        }
+      }
+
+      if (/租客|出房|卫管/.test(text)) {
+        const data = parseTenantData(text);
+        addTenantFromData(data);
+        tenantCount++;
+      }
+    }
+  }
+
+  if (!landlordFound) {
+    showToast('未识别到房东信息，请检查截图或手动填写', 'warning');
+  }
+  if (tenantCount === 0) {
+    showToast('未识别到租客信息，请检查截图或手动添加', 'warning');
+  }
+
+  // Don't auto-calculate - user clicks button after confirming
+}
+
+// ========== TENANT MANAGEMENT ==========
+function createTenant(data) {
+  tenantCounter++;
+  const label = String.fromCharCode(64 + tenantCounter); // A, B, C...
+  return {
+    id: Date.now() + Math.random(),
+    label: label,
+    name: data.name || '',
+    rent: parseAmount(data.rent || '0'),
+    cleaningFee: parseAmount(data.cleaningFee || '0'),
+    startDate: normalizeDate(data.startDate || ''),
+    endDate: normalizeDate(data.endDate || ''),
+  };
+}
+
+function addTenant() {
+  const t = createTenant({});
+  tenants.push(t);
+  renderTenants();
+  // Auto-focus name input of the newly added tenant
+  const cards = document.querySelectorAll('.tenant-card');
+  if (cards.length > 0) {
+    const lastCard = cards[cards.length - 1];
+    const firstInput = lastCard.querySelector('input');
+    if (firstInput) setTimeout(() => firstInput.focus(), 50);
+  }
+  showToast(`已添加租客${t.label}，可直接输入`, 'info');
+}
+
+function addTenantFromData(data) {
+  if (parseAmount(data.rent) === 0 && !data.name) {
+    return;
+  }
+  const t = createTenant(data);
+  tenants.push(t);
+  renderTenants();
+}
+
+function deleteTenant(index) {
+  if (confirm(`确定删除租客${tenants[index].label}吗？`)) {
+    tenants.splice(index, 1);
+    // Re-assign labels
+    tenants.forEach((t, i) => {
+      t.label = String.fromCharCode(65 + i);
+    });
+    tenantCounter = tenants.length;
+    renderTenants();
+    showToast('租客已删除', 'info');
+  }
+}
+
+function escHtml(str) {
+  if (!str) return '';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function normalizeDateInput(str) {
+  if (!str || str.length < 4) return str || '';
+  // Accept YYYY/MM/DD, YYYY.MM.DD, YYYYMMDD → convert to YYYY-MM-DD
+  let d = str.replace(/[\/\.]/g, '-');
+  // If YYYYMMDD format (no separators), insert dashes
+  if (/^\d{8}$/.test(d)) {
+    d = d.slice(0,4) + '-' + d.slice(4,6) + '-' + d.slice(6,8);
+  }
+  // Validate final format
+  if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(d)) {
+    const parts = d.split('-');
+    return parts[0] + '-' + parts[1].padStart(2,'0') + '-' + parts[2].padStart(2,'0');
+  }
+  return str;
+}
+
+function updateTenantField(index, field, value) {
+  if (index < 0 || index >= tenants.length) return;
+  if (field === 'rent' || field === 'cleaningFee') {
+    tenants[index][field] = parseAmount(value);
+  } else if (field === 'startDate' || field === 'endDate') {
+    tenants[index][field] = normalizeDateInput(value);
+  } else {
+    tenants[index][field] = value;
+  }
+  if (field === 'startDate' || field === 'endDate' || field === 'rent' || field === 'cleaningFee') {
+    renderTenants();
+  }
+}
+
+function getTenantReceivedText(t) {
+  const s = new Date(t.startDate), e = new Date(t.endDate);
+  const d = (!isNaN(s) && !isNaN(e) && e >= s) ? days360(s, e) : 0;
+  if (d <= 0) return (t.rent + t.cleaningFee) + '';
+  const rentTotal = t.rent / 30 * d;
+  const total = rentTotal + t.cleaningFee;
+  return '<strong style="color:var(--success);">' + fmt(rentTotal) + (t.cleaningFee > 0 ? '+' + t.cleaningFee : '') + '=' + fmt(total) + '</strong>';
+}
+
+function renderTenants() {
+  const container = document.getElementById('tenantList');
+  // 更新租客月租金合计
+  const totalRent = tenants.reduce((sum, t) => sum + (parseFloat(t.rent) || 0), 0);
+  const totalEl = document.getElementById('tenantTotalRent');
+  if (totalEl) totalEl.textContent = totalRent > 0 ? `合计 ${fmt(totalRent)}` : '';
+  if (tenants.length === 0) {
+    container.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px;">暂无租客，请上传截图识别或手动添加</div>';
+    return;
+  }
+  container.innerHTML = tenants.map((t, i) => `
+    <div class="tenant-card">
+      <div class="tenant-card-header">
+        <span class="tenant-label">租客 ${t.label}</span>
+        ${t.rent > 0 ? `<span style="font-size:12px;color:var(--text-secondary);font-weight:400;margin-left:6px;">日租金 ${fmtRate(t.rent / 30)}</span>` : ''}
+        <div class="tenant-actions">
+          <button class="btn btn-danger btn-small" onclick="deleteTenant(${i})">删除</button>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr auto 1fr auto;gap:6px 12px;align-items:center;">
+        <div class="tenant-field">
+          <span class="tf-label" style="white-space:nowrap;font-size:12px;">姓名</span>
+          <input class="ti-input" value="${escHtml(t.name)}" placeholder="租客姓名" onchange="updateTenantField(${i},'name',this.value)" style="flex:1;min-width:0;padding:3px 4px;font-size:12px;">
+        </div>
+        <div class="tenant-field" style="white-space:nowrap;">
+          <span class="tf-label" style="font-size:12px;">天数</span>
+          <span class="ti-input" style="background:#F8FAFC;cursor:default;min-width:36px;width:36px;text-align:center;padding:3px 4px;font-size:12px;">${(() => {
+            if (t.startDate && t.endDate) {
+              const s = new Date(t.startDate);
+              const e = new Date(t.endDate);
+              if (!isNaN(s.getTime()) && !isNaN(e.getTime()) && e >= s) {
+                return days360(s, e);
+              }
+            }
+            return '--';
+          })()}</span>
+          <span class="ti-unit" style="font-size:11px;">天</span>
+        </div>
+        <div class="tenant-field">
+          <span class="tf-label" style="white-space:nowrap;font-size:12px;">出房价格</span>
+          <input class="ti-input" type="number" value="${t.rent || ''}" placeholder="0" onchange="updateTenantField(${i},'rent',this.value)" style="width:80px;padding:3px 4px;font-size:12px;">
+        </div>
+        <div class="tenant-field" style="white-space:nowrap;">
+          <span class="tf-label" style="white-space:nowrap;font-size:12px;">卫管费</span>
+          <input class="ti-input" type="number" value="${t.cleaningFee || ''}" placeholder="0" onchange="updateTenantField(${i},'cleaningFee',this.value)" style="width:60px;padding:3px 4px;font-size:12px;">
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;margin-top:4px;">
+        <div class="tenant-field" style="display:flex;align-items:center;gap:4px;">
+          <span class="tf-label" style="white-space:nowrap;">租期</span>
+          <input class="ti-input date-input" type="text" value="${t.startDate || ''}" placeholder="起始" maxlength="10" onchange="updateTenantField(${i},'startDate',this.value)">
+          <span style="margin:0 2px;color:var(--text-secondary);font-size:13px;">~</span>
+          <input class="ti-input date-input" type="text" value="${t.endDate || ''}" placeholder="结束" maxlength="10" onchange="updateTenantField(${i},'endDate',this.value)">
+        </div>
+        ${t.rent > 0 || t.cleaningFee > 0 ? `<div style="font-size:12px;color:var(--text-secondary);">收到: ${getTenantReceivedText(t)}</div>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+// ========== CALCULATION ==========
+// 30/360 day count: every month = 30 days, year = 360 days
+function days360(start, end) {
+  let d1 = start.getDate(), m1 = start.getMonth() + 1, y1 = start.getFullYear();
+  let d2 = end.getDate(), m2 = end.getMonth() + 1, y2 = end.getFullYear();
+  if (d1 > 30) d1 = 30;
+  if (d2 > 30) d2 = 30;
+  const diff = (y2 - y1) * 360 + (m2 - m1) * 30 + (d2 - d1);
+  return diff + 1; // inclusive: count both start and end day
+}
+function syncEndDates() {
+  const checkbox = document.getElementById('syncEndDate');
+  // Prefer contract 2's end date as the overall end; fall back to contract 1
+  let endDate = document.getElementById('ldEndDate2').value;
+  if (!endDate) endDate = document.getElementById('ldEndDate1').value;
+  if (!checkbox.checked || !endDate) return;
+  tenants.forEach(t => {
+    t.endDate = endDate;
+  });
+  renderTenants();
+  showToast('已同步所有租客到期日', 'success');
+}
+let originalEndDate = '';
+function toggleFirstQuarter() {
+  const checkbox = document.getElementById('firstQuarter');
+  const endDateInput = document.getElementById('ldEndDate1');
+  const startDateInput = document.getElementById('ldStartDate1');
+  if (checkbox.checked) {
+    originalEndDate = endDateInput.value;
+    const startDate = startDateInput.value;
+    if (startDate) {
+      const d = new Date(startDate);
+      d.setMonth(d.getMonth() + 3);
+      d.setDate(d.getDate() - 1);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      endDateInput.value = `${yyyy}-${mm}-${dd}`;
+    }
+  } else {
+    endDateInput.value = originalEndDate;
+  }
+  if (document.getElementById('syncEndDate').checked) {
+    syncEndDates();
+  }
+}
+function showContract2() {
+  document.getElementById('contract2Box').style.display = '';
+  document.getElementById('addContract2Btn').style.display = 'none';
+}
+function removeContract2() {
+  document.getElementById('contract2Box').style.display = 'none';
+  document.getElementById('addContract2Btn').style.display = '';
+  // Clear contract 2 fields
+  document.getElementById('ldRent2').value = '';
+  document.getElementById('ldFreeDays2').value = '';
+  document.getElementById('ldStartDate2').value = '';
+  document.getElementById('ldEndDate2').value = '';
+  recalculate();
+}
+function scheduleRecalc() {
+  if (recalcTimer) clearTimeout(recalcTimer);
+  recalcTimer = setTimeout(recalculate, 300);
+}
+
+function recalculate() {
+  // ── Contract 1 ──
+  const rent1 = parseAmount(document.getElementById('ldRent1').value || '0');
+  const freeDays1 = parseInt(document.getElementById('ldFreeDays1').value || '0');
+  const start1 = document.getElementById('ldStartDate1').value;
+  const end1 = document.getElementById('ldEndDate1').value;
+
+  // ── Contract 2 ──
+  const rent2 = parseAmount(document.getElementById('ldRent2').value || '0');
+  const freeDays2 = parseInt(document.getElementById('ldFreeDays2').value || '0');
+  const start2 = document.getElementById('ldStartDate2').value;
+  const end2 = document.getElementById('ldEndDate2').value;
+
+  const isFirstQuarter = document.getElementById('firstQuarter').checked;
+
+  // ── Determine calculation period ──
+  let calcStart = null, calcEnd = null;
+  let calcLabel = '';
+  const ldStart1 = start1 ? new Date(start1) : null;
+  const ldEnd2 = end2 ? new Date(end2) : null;
+
+  if (isFirstQuarter && ldStart1 && !isNaN(ldStart1.getTime())) {
+    calcStart = new Date(ldStart1);
+    calcEnd = new Date(ldStart1);
+    calcEnd.setMonth(calcEnd.getMonth() + 3);
+    calcEnd.setDate(calcEnd.getDate() - 1);
+    calcLabel = '首季度';
+  } else if (ldStart1 && ldEnd2 && !isNaN(ldStart1.getTime()) && !isNaN(ldEnd2.getTime())) {
+    calcStart = new Date(ldStart1);
+    calcEnd = new Date(ldEnd2);
+    calcLabel = '业主租期';
+  }
+
+  // ── Calculate contract 1 cost ──
+  let days1 = 0, dailyRate1 = 0, freeCost1 = 0, cost1 = 0;
+  if (rent1 > 0) {
+    dailyRate1 = rent1 / 30;
+    freeCost1 = freeDays1 * dailyRate1;
+    const sd1 = start1 ? new Date(start1) : null;
+    const ed1 = end1 ? new Date(end1) : null;
+    if (calcStart && calcEnd && sd1 && ed1 && !isNaN(sd1.getTime()) && !isNaN(ed1.getTime())) {
+      const oS = sd1 > calcStart ? new Date(sd1) : new Date(calcStart);
+      const oE = ed1 < calcEnd ? new Date(ed1) : new Date(calcEnd);
+      if (oE >= oS) days1 = days360(oS, oE);
+    }
+    if (days1 === 0) days1 = 90;
+    cost1 = dailyRate1 * days1 - freeCost1;
+  }
+
+  // ── Calculate contract 2 cost ──
+  let days2 = 0, dailyRate2 = 0, freeCost2 = 0, cost2 = 0;
+  if (rent2 > 0) {
+    dailyRate2 = rent2 / 30;
+    freeCost2 = freeDays2 * dailyRate2;
+    const sd2 = start2 ? new Date(start2) : null;
+    const ed2 = end2 ? new Date(end2) : null;
+    if (calcStart && calcEnd && sd2 && ed2 && !isNaN(sd2.getTime()) && !isNaN(ed2.getTime())) {
+      const oS = sd2 > calcStart ? new Date(sd2) : new Date(calcStart);
+      const oE = ed2 < calcEnd ? new Date(ed2) : new Date(calcEnd);
+      if (oE >= oS) days2 = days360(oS, oE);
+    }
+    if (days2 === 0) days2 = 90;
+    cost2 = dailyRate2 * days2 - freeCost2;
+  }
+
+  const totalExpense = cost1 + cost2;
+
+  // ── Calculate income per tenant ──
+  let tenantIncomeDetails = [];
+  let totalIncome = 0;
+
+  tenants.forEach(t => {
+    let quarterRent = 0;
+    let overlapDays = 0;
+    let isProRated = false;
+
+    if (calcStart && calcEnd && t.startDate && t.endDate) {
+      const tStart = new Date(t.startDate);
+      const tEnd = new Date(t.endDate);
+      if (!isNaN(tStart.getTime()) && !isNaN(tEnd.getTime())) {
+        const oStart = tStart > calcStart ? new Date(tStart) : new Date(calcStart);
+        const oEnd = tEnd < calcEnd ? new Date(tEnd) : new Date(calcEnd);
+        if (oStart < oEnd) {
+          overlapDays = days360(oStart, oEnd);
+          quarterRent = (t.rent / 30) * overlapDays;
+          isProRated = true;
+        }
+      }
+    }
+    if (!isProRated) {
+      quarterRent = t.rent * 3;
+      overlapDays = 90;
+    }
+
+    totalIncome += quarterRent + t.cleaningFee;
+
+    tenantIncomeDetails.push({
+      label: t.label, rent: t.rent, quarterRent: quarterRent,
+      overlapDays: overlapDays, cleaningFee: t.cleaningFee,
+      isProRated: isProRated
+    });
+  });
+
+  // Net Profit
+  let netProfit = totalIncome - totalExpense;
+
+  // ── Display results ──
+  document.getElementById('resIncome').textContent = fmt(totalIncome);
+  document.getElementById('resExpense').textContent = fmt(totalExpense);
+  document.getElementById('resProfit').textContent = fmt(netProfit);
+
+  // ── Monthly price difference ──
+  const landlordRent = parseAmount(document.getElementById('ldRent1').value || '0');
+  const tenantTotalRent = tenants.reduce((sum, t) => sum + t.rent, 0);
+  const diff = tenantTotalRent - landlordRent;
+  document.getElementById('resDiff').textContent = fmt(diff);
+  document.getElementById('resDiff').style.color = diff >= 0 ? 'var(--success)' : 'var(--danger)';
+
+  const profitEl = document.getElementById('resProfit');
+  const incomeEl = document.getElementById('resIncome');
+  const expenseEl = document.getElementById('resExpense');
+  if (netProfit > 0) profitEl.style.color = 'var(--success)';
+  else if (netProfit < 0) profitEl.style.color = 'var(--danger)';
+  else profitEl.style.color = 'var(--text)';
+  incomeEl.style.color = '#059669';
+  expenseEl.style.color = '#DC2626';
+
+  // ── Compact detail display ──
+  const detailEl = document.getElementById('detail360');
+  const detailContent = document.getElementById('detail360Content');
+  let hasDetail = false;
+  let html = '';
+
+  if (calcStart && calcEnd) {
+    hasDetail = true;
+    const calcStartStr = calcStart.toISOString().slice(0,10);
+    const calcEndStr = calcEnd.toISOString().slice(0,10);
+    const totalDays = days360(calcStart, calcEnd);
+    html += `<strong>📋 ${calcLabel}明细</strong> <span style="font-size:11px;">${calcStartStr} ~ ${calcEndStr}（${totalDays}天）</span>`;
+  }
+
+  if (tenantIncomeDetails.length > 0) {
+    hasDetail = true;
+    html += '<div style="border-top:1px solid var(--border);padding-top:6px;margin-top:6px;">';
+    tenantIncomeDetails.forEach(d => {
+      const total = d.quarterRent + d.cleaningFee;
+      if (d.isProRated) {
+        html += `<div style="font-size:12px;">• 租客${d.label}：${d.overlapDays}天${fmt(d.quarterRent)}+卫管${d.cleaningFee}=${fmt(total)}</div>`;
+      } else {
+        html += `<div style="font-size:12px;">• 租客${d.label}：3个月${fmt(d.quarterRent)}+卫管${d.cleaningFee}=${fmt(total)}</div>`;
+      }
+    });
+    html += `<div style="margin-top:4px;font-weight:600;">收入合计 ${fmt(totalIncome)}</div>`;
+    html += '</div>';
+  }
+
+  // ── Expense detail: show both contracts separately ──
+  if (rent1 > 0 || rent2 > 0) {
+    hasDetail = true;
+    html += '<div style="border-top:1px solid var(--border);padding-top:6px;margin-top:6px;">';
+    if (rent1 > 0) {
+      html += `<div style="font-size:12px;">• 合同一：${days1}天${fmt(dailyRate1*days1)}${freeDays1 > 0 ? ` - 免租${freeDays1}天${fmt(freeCost1)}` : ''}=${fmt(cost1)}</div>`;
+    }
+    if (rent2 > 0) {
+      html += `<div style="font-size:12px;">• 合同二：${days2}天${fmt(dailyRate2*days2)}${freeDays2 > 0 ? ` - 免租${freeDays2}天${fmt(freeCost2)}` : ''}=${fmt(cost2)}</div>`;
+    }
+    html += `<div style="font-weight:600;">支出合计 ${fmt(totalExpense)}</div>`;
+    html += '</div>';
+  }
+
+  // ── Net profit line ──
+  if (hasDetail && (totalIncome > 0 || totalExpense > 0)) {
+    const profitColor = netProfit >= 0 ? 'var(--success)' : 'var(--danger)';
+    html += `<div style="border-top:1px solid var(--border);padding-top:6px;margin-top:6px;font-weight:600;">`;
+    html += `净利润 = 收入${fmt(totalIncome)} − 支出${fmt(totalExpense)} = <span style="color:${profitColor};">${fmt(netProfit)}</span>`;
+    html += '</div>';
+  }
+
+  if (hasDetail) {
+    detailEl.style.display = 'block';
+    detailContent.innerHTML = html;
+  } else {
+    detailEl.style.display = 'none';
+  }
+
+  // Auto-save to cloud
+  saveCalcRecord();
+}
+
+// ========== REPARSE FROM TEXT ==========
+function reparseFromText() {
+  const rawText = document.getElementById('rawText').value;
+  if (!rawText.trim()) {
+    showToast('识别结果为空，无法解析', 'warning');
+    return;
+  }
+
+  // Split by screenshot markers
+  const sections = rawText.split(/---\s*截图\s*\d+\s*\(.+?\)\s*---/);
+  ocrResults = [];
+
+  for (let i = 0; i < sections.length; i++) {
+    const text = sections[i].trim();
+    if (!text) continue;
+    const pageType = detectPageType(text);
+    ocrResults.push({ text, pageType });
+  }
+
+  // If no sections found, treat entire text as one
+  if (ocrResults.length === 0 && rawText.trim()) {
+    const text = rawText.trim();
+    ocrResults.push({ text, pageType: detectPageType(text) });
+  }
+
+  // Reset and re-parse
+  document.getElementById('ldPropertyId').value = '';
+  document.getElementById('ldRent1').value = '';
+  document.getElementById('ldFreeDays1').value = '';
+  document.getElementById('ldStartDate1').value = '';
+  document.getElementById('ldEndDate1').value = '';
+  document.getElementById('ldRent2').value = '';
+  document.getElementById('ldFreeDays2').value = '';
+  document.getElementById('ldStartDate2').value = '';
+  document.getElementById('ldEndDate2').value = '';
+  tenants = [];
+  tenantCounter = 0;
+
+  parseAllResults();
+  showToast('已重新解析识别文本', 'success');
+}
+
+// ========== FOCUS HELPER ==========
+function focusField(id) {
+  const el = document.getElementById(id);
+  if (el) {
+    el.focus();
+    el.select();
+  }
+}
+
+// ========== RESET ==========
+// ========== COPY DETAIL ==========
+function copyDetail() {
+  const el = document.getElementById('detail360Content');
+  if (!el) return;
+  // 纯文本复制：去掉 HTML 标签
+  const text = el.innerText || el.textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('已复制到剪贴板', 'success');
+  }).catch(() => {
+    // fallback
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('已复制到剪贴板', 'success');
+  });
+}
+
+// ========== RESET ==========
+function resetAll() {
+  if (!confirm('确定要清空所有数据算下一套吗？')) return;
+  // Clear uploaded images
+  uploadedFiles.forEach(item => URL.revokeObjectURL(item.previewUrl));
+  uploadedFiles = [];
+  ocrResults = [];
+  updateUploadPreview();
+  updateUploadCount();
+  updateOcrButton();
+  document.getElementById('ocrProgress').classList.remove('active');
+  document.getElementById('rawText').value = '';
+  document.getElementById('rawTextSection').style.display = 'none';
+  document.getElementById('toggleRawBtn').textContent = '查看原始文本';
+  // Clear landlord
+  document.getElementById('ldPropertyId').value = '';
+  document.getElementById('ldRent1').value = '';
+  document.getElementById('ldFreeDays1').value = '';
+  document.getElementById('ldStartDate1').value = '';
+  document.getElementById('ldEndDate1').value = '';
+  document.getElementById('ldRent2').value = '';
+  document.getElementById('ldFreeDays2').value = '';
+  document.getElementById('ldStartDate2').value = '';
+  document.getElementById('ldEndDate2').value = '';
+  document.getElementById('syncEndDate').checked = true;
+  document.getElementById('firstQuarter').checked = false;
+  originalEndDate = '';
+  // Hide contract 2
+  document.getElementById('contract2Box').style.display = 'none';
+  document.getElementById('addContract2Btn').style.display = '';
+
+  // Clear tenants
+  tenants = [];
+  tenantCounter = 0;
+  renderTenants();
+  // Clear results
+  document.getElementById('resDiff').textContent = '待计算';
+  document.getElementById('resDiff').style.color = 'var(--text-secondary)';
+  document.getElementById('resIncome').textContent = '待计算';
+  document.getElementById('resExpense').textContent = '待计算';
+  document.getElementById('resProfit').textContent = '待计算';
+  document.getElementById('resProfit').style.color = 'var(--text-secondary)';
+  document.getElementById('resIncome').style.color = 'var(--text-secondary)';
+  document.getElementById('resExpense').style.color = 'var(--text-secondary)';
+  document.getElementById('detail360').style.display = 'none';
+  showToast('已重置，可以算下一套了', 'info');
+}
+
+// ========== IMAGE VIEWER ==========
+let currentImageViewIndex = 0;
+function viewImage(index) {
+  const item = uploadedFiles[index];
+  if (!item) return;
+  currentImageViewIndex = index;
+  const overlay = document.querySelector('.image-viewer-overlay');
+  const img = overlay.querySelector('img');
+  const counter = overlay.querySelector('.iv-counter');
+  const prevBtn = overlay.querySelector('.iv-nav.prev');
+  const nextBtn = overlay.querySelector('.iv-nav.next');
+  img.src = item.previewUrl;
+  img.classList.remove('zoomed');
+  counter.textContent = `${index + 1} / ${uploadedFiles.length}`;
+  prevBtn.classList.toggle('hidden', index === 0);
+  nextBtn.classList.toggle('hidden', index === uploadedFiles.length - 1);
+  overlay.classList.add('active');
+}
+function navImage(dir) {
+  const newIdx = currentImageViewIndex + dir;
+  if (newIdx >= 0 && newIdx < uploadedFiles.length) {
+    viewImage(newIdx);
+  }
+}
+function closeImageViewer() {
+  document.querySelector('.image-viewer-overlay').classList.remove('active');
+}
+
+// ========== TOAST ==========
+function showToast(message, type = 'info') {
+  // Remove existing toasts
+  document.querySelectorAll('.toast').forEach(t => t.remove());
+
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transition = 'opacity 0.3s ease';
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+</script>
+
+<!-- Supabase CDN -->
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script>
+// ========== SUPABASE ==========
+const SB_URL = 'https://nskatipsgtspvvpsrhzs.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5za2F0aXBzZ3RzcHZ2cHNyaHpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM4NTgzMzQsImV4cCI6MjA5OTQzNDMzNH0.B4HvpVghYUmtWbPtClD6VZlk2yI74Utik3vx6imrcpc';
+const sb = supabase.createClient(SB_URL, SB_KEY);
+
+async function saveCalcRecord() {
+  const propertyId = document.getElementById('ldPropertyId').value || '';
+  const detail = document.getElementById('detail360Content').innerText;
+  const income = parseAmount(document.getElementById('resIncome').innerText);
+  const expense = parseAmount(document.getElementById('resExpense').innerText);
+  const profit = parseAmount(document.getElementById('resProfit').innerText);
+  if (income === 0 && expense === 0) return; // no data to save
+
+  // Capture full form state
+  const state = {
+    propertyId,
+    rent1: document.getElementById('ldRent1').value,
+    freeDays1: document.getElementById('ldFreeDays1').value,
+    startDate1: document.getElementById('ldStartDate1').value,
+    endDate1: document.getElementById('ldEndDate1').value,
+    rent2: document.getElementById('ldRent2').value,
+    freeDays2: document.getElementById('ldFreeDays2').value,
+    startDate2: document.getElementById('ldStartDate2').value,
+    endDate2: document.getElementById('ldEndDate2').value,
+    syncEndDate: document.getElementById('syncEndDate').checked,
+    firstQuarter: document.getElementById('firstQuarter').checked,
+    contract2Visible: document.getElementById('contract2Box').style.display !== 'none',
+    tenantCounter: tenantCounter,
+    tenants: tenants.map(t => ({ ...t }))
+  };
+
+  // Calculate monthly difference
+  const landlordRent = parseAmount(document.getElementById('ldRent1').value || '0');
+  const tenantTotalRent = tenants.reduce((sum, t) => sum + t.rent, 0);
+  const monthlyDiff = tenantTotalRent - landlordRent;
+
+  const { error } = await sb.from('calc_records').insert({
+    property_id: propertyId, detail, income, expense, profit,
+    state_json: JSON.stringify(state),
+    monthly_diff: monthlyDiff
+  });
+  if (error) {
+    console.error('Save failed:', error);
+    document.getElementById('historyStatus').className = 'history-status err';
+    document.getElementById('historyStatus').textContent = '保存失败';
+  } else {
+    document.getElementById('historyStatus').className = 'history-status ok';
+    document.getElementById('historyStatus').textContent = '已保存';
+    loadHistory();
+  }
+}
+
+let historyKeyword = '';
+let historyShowAll = false;
+
+function toggleHistoryShowAll() {
+  historyShowAll = !historyShowAll;
+  document.getElementById('historyShowAllBtn').textContent = historyShowAll ? '收起' : '显示更多';
+  loadHistory();
+}
+
+function searchHistory() {
+  historyKeyword = document.getElementById('historySearch').value.trim();
+  loadHistory();
+}
+
+async function loadHistory() {
+  const listEl = document.getElementById('historyList');
+  const limit = historyShowAll ? 100 : 10;
+  let query = sb.from('calc_records').select('*').order('created_at', { ascending: false }).limit(limit);
+  if (historyKeyword) {
+    query = query.ilike('property_id', '%' + historyKeyword + '%');
+  }
+  const { data, error } = await query;
+  if (error) {
+    listEl.innerHTML = '<div class="history-empty">加载失败</div>';
+    return;
+  }
+  if (!data || data.length === 0) {
+    listEl.innerHTML = '<div class="history-empty">' + (historyKeyword ? '未找到匹配的记录' : '暂无记录') + '</div>';
+    return;
+  }
+  listEl.innerHTML = data.map(r => {
+    const d = new Date(r.created_at);
+    const dateStr = d.toLocaleDateString('zh-CN') + ' ' + d.toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit'});
+    const profitClass = r.profit >= 0 ? 'pos' : 'neg';
+    const profitSign = r.profit >= 0 ? '+' : '';
+    return '<div class="history-item" onclick="loadRecord(\'' + r.id + '\')">' +
+      '<div class="history-info">' +
+        '<div class="hi-title">' + (r.property_id || '无编号') + '</div>' +
+        '<div class="hi-date">' + dateStr + '</div>' +
+        '<div class="hi-result">收 ' + fmt(r.income) + ' ｜ 支 ' + fmt(r.expense) + ' ｜ <strong>差价 ' + (r.monthly_diff !== undefined && r.monthly_diff !== null ? fmt(r.monthly_diff) : '--') + '</strong></div>' +
+      '</div>' +
+      '<div class="history-profit ' + profitClass + '">' + profitSign + fmt(r.profit) + '</div>' +
+      '<button class="history-del" onclick="event.stopPropagation();deleteRecord(\'' + r.id + '\')" title="删除">×</button>' +
+    '</div>';
+  }).join('');
+  // Add show more toggle if there are 10+ records
+  if (data.length >= 10 && !historyKeyword) {
+    listEl.innerHTML += '<div style="text-align:center;padding:8px;"><button id="historyShowAllBtn" class="btn btn-small" onclick="toggleHistoryShowAll()" style="padding:4px 16px;border:1px solid var(--border);background:#fff;color:var(--primary);border-radius:4px;cursor:pointer;font-size:12px;">' + (historyShowAll ? '收起' : '显示更多') + '</button></div>';
+  }
+}
+
+async function loadRecord(id) {
+  const { data, error } = await sb.from('calc_records').select('detail, state_json').eq('id', id).single();
+  if (error || !data) return;
+
+  // Restore form state if available
+  if (data.state_json) {
+    try {
+      const s = JSON.parse(data.state_json);
+      document.getElementById('ldPropertyId').value = s.propertyId || '';
+      document.getElementById('ldRent1').value = s.rent1 || '';
+      document.getElementById('ldFreeDays1').value = s.freeDays1 || '';
+      document.getElementById('ldStartDate1').value = s.startDate1 || '';
+      document.getElementById('ldEndDate1').value = s.endDate1 || '';
+      document.getElementById('ldRent2').value = s.rent2 || '';
+      document.getElementById('ldFreeDays2').value = s.freeDays2 || '';
+      document.getElementById('ldStartDate2').value = s.startDate2 || '';
+      document.getElementById('ldEndDate2').value = s.endDate2 || '';
+      document.getElementById('syncEndDate').checked = s.syncEndDate || false;
+      document.getElementById('firstQuarter').checked = s.firstQuarter || false;
+      if (s.contract2Visible) {
+        document.getElementById('contract2Box').style.display = '';
+        document.getElementById('addContract2Btn').style.display = 'none';
+      } else {
+        document.getElementById('contract2Box').style.display = 'none';
+        document.getElementById('addContract2Btn').style.display = '';
+      }
+      // Restore tenants
+      tenantCounter = s.tenantCounter || 0;
+      tenants = (s.tenants || []).map(t => ({ ...t }));
+      renderTenants();
+    } catch(e) {
+      console.error('Failed to restore state', e);
+    }
+  }
+
+  // Auto-lock after restoring history data
+  document.getElementById('lockToggle').checked = true;
+  toggleLock();
+
+  // Show detail text
+  const detailEl = document.getElementById('detail360');
+  const detailContent = document.getElementById('detail360Content');
+  detailEl.style.display = 'block';
+  detailContent.innerText = data.detail;
+}
+
+async function deleteRecord(id) {
+  if (!confirm('确定删除这条记录？')) return;
+  const { error } = await sb.from('calc_records').delete().eq('id', id);
+  if (!error) loadHistory();
+}
+
+// ========== LOCK TOGGLE ==========
+function toggleLock() {
+  const locked = document.getElementById('lockToggle').checked;
+  document.getElementById('lockLabel').textContent = locked ? '已锁定' : '锁定';
+  const inputs = document.querySelectorAll(
+    '#ldPropertyId, #ldRent1, #ldFreeDays1, #ldStartDate1, #ldEndDate1, ' +
+    '#ldRent2, #ldFreeDays2, #ldStartDate2, #ldEndDate2, ' +
+    '#historySearch, .tenant-card input, #fileInput, #rawText'
+  );
+  inputs.forEach(el => {
+    if (locked) el.setAttribute('disabled', 'disabled');
+    else el.removeAttribute('disabled');
+  });
+  // Disable/enable buttons
+  const btns = ['btnOcr', 'btnClear'];
+  btns.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = locked;
+  });
+  document.querySelectorAll('[onclick*="recalculate"],[onclick*="resetAll"],[onclick*="addTenant"],[onclick*="reparseFromText"],[onclick*="toggleRawText"]').forEach(el => {
+    if (locked) el.setAttribute('disabled', 'disabled');
+    else el.removeAttribute('disabled');
+  });
+}
+
+// Load history on page load
+document.addEventListener('DOMContentLoaded', loadHistory);
+</script>
+</body>
+</html>

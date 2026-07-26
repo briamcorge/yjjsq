@@ -1,0 +1,16 @@
+# Screenshots
+ScreenShot_*.png
+v1.4_pc_*.png
+
+# Conversation logs
+对话记录.txt
+新建文本文档.txt
+
+# OpenCode config
+.omo/
+.opencode/
+.playwright-mcp/
+
+# OS
+Thumbs.db
+.DS_Store
