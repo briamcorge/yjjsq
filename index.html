@@ -2492,7 +2492,7 @@ async function loadRecord(id) {
       }
       // Restore tenants
       tenantCounter = s.tenantCounter || 0;
-      tenants = (s.tenants || []).map(t => ({ ...t }));
+      tenants = (s.tenants || []).map(t => ({ ...t, includeInDiff: t.includeInDiff !== false }));
       renderTenants();
     } catch(e) {
       console.error('Failed to restore state', e);
