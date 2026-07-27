@@ -2017,10 +2017,14 @@ function recalculate() {
     calcEnd.setMonth(calcEnd.getMonth() + 3);
     calcEnd.setDate(calcEnd.getDate() - 1);
     calcLabel = '首季度';
-  } else if (ldStart1 && ldEnd2 && !isNaN(ldStart1.getTime()) && !isNaN(ldEnd2.getTime())) {
-    calcStart = new Date(ldStart1);
-    calcEnd = new Date(ldEnd2);
-    calcLabel = '业主租期';
+  } else {
+    // 不勾首季度 → 按业主整个租期算
+    const ldEnd1 = end1 ? new Date(end1) : null;
+    if (ldStart1 && !isNaN(ldStart1.getTime()) && ldEnd1 && !isNaN(ldEnd1.getTime())) {
+      calcStart = new Date(ldStart1);
+      calcEnd = ldEnd2 && !isNaN(ldEnd2.getTime()) ? new Date(ldEnd2) : new Date(ldEnd1);
+      calcLabel = '业主租期';
+    }
   }
 
   // ── Calculate contract 1 cost ──
@@ -2371,8 +2375,8 @@ async function saveCalcRecord() {
     freeDays2: document.getElementById('ldFreeDays2').value,
     startDate2: document.getElementById('ldStartDate2').value,
     endDate2: document.getElementById('ldEndDate2').value,
-    syncEndDate: document.getElementById('syncEndDate').checked,
-    firstQuarter: document.getElementById('firstQuarter').checked,
+      syncEndDate: document.getElementById('syncEndDate').checked,
+      firstQuarter: document.getElementById('firstQuarter').checked,
     contract2Visible: document.getElementById('contract2Box').style.display !== 'none',
     tenantCounter: tenantCounter,
     tenants: tenants.map(t => ({ ...t }))
