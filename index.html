@@ -994,7 +994,7 @@ button:disabled {
 
   <!-- Header -->
   <div class="header">
-    <h1>业绩计算器 <span style="font-size:12px;color:var(--text-muted);font-weight:400;">v1.11</span></h1>
+    <h1>业绩计算器 <span style="font-size:12px;color:var(--text-muted);font-weight:400;">v1.12</span></h1>
   </div>
 
   <!-- Section: Upload -->
@@ -1782,6 +1782,7 @@ function createTenant(data) {
     cleaningFee: parseAmount(data.cleaningFee || '0'),
     startDate: normalizeDate(data.startDate || ''),
     endDate: normalizeDate(data.endDate || ''),
+    includeInDiff: data.includeInDiff !== false,
   };
 }
 
@@ -1819,6 +1820,12 @@ function deleteTenant(index) {
     renderTenants();
     showToast('租客已删除', 'info');
   }
+}
+
+function toggleTenantDiff(index) {
+  if (index < 0 || index >= tenants.length) return;
+  tenants[index].includeInDiff = !tenants[index].includeInDiff;
+  // 月差价无需重渲染，只是下次计算时生效
 }
 
 function escHtml(str) {
@@ -1920,6 +1927,9 @@ function renderTenants() {
           <input class="ti-input date-input" type="text" value="${t.endDate || ''}" placeholder="结束" maxlength="10" onchange="updateTenantField(${i},'endDate',this.value)">
         </div>
         ${t.rent > 0 || t.cleaningFee > 0 ? `<div style="font-size:12px;color:var(--text-secondary);">收到: ${getTenantReceivedText(t)}</div>` : ''}
+        <label style="font-size:11px;color:var(--text-muted);white-space:nowrap;margin-left:auto;cursor:pointer;" title="勾选则计入月差价">
+          <input type="checkbox" onchange="toggleTenantDiff(${i})" ${t.includeInDiff !== false ? 'checked' : ''} style="cursor:pointer;vertical-align:middle;"> 差价
+        </label>
       </div>
     </div>
   `).join('');
@@ -2107,7 +2117,7 @@ function recalculate() {
 
   // ── Monthly price difference ──
   const landlordRent = parseAmount(document.getElementById('ldRent1').value || '0');
-  const tenantTotalRent = tenants.reduce((sum, t) => sum + t.rent, 0);
+  const tenantTotalRent = tenants.reduce((sum, t) => sum + (t.includeInDiff !== false ? t.rent : 0), 0);
   const diff = tenantTotalRent - landlordRent;
   document.getElementById('resDiff').textContent = fmt(diff);
   document.getElementById('resDiff').style.color = diff >= 0 ? 'var(--success)' : 'var(--danger)';
