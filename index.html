@@ -2394,7 +2394,7 @@ async function saveCalcRecord() {
 
   // Calculate monthly difference
   const landlordRent = parseAmount(document.getElementById('ldRent1').value || '0');
-  const tenantTotalRent = tenants.reduce((sum, t) => sum + t.rent, 0);
+  const tenantTotalRent = tenants.reduce((sum, t) => sum + (t.includeInDiff !== false ? t.rent : 0), 0);
   const monthlyDiff = tenantTotalRent - landlordRent;
 
   const { error } = await sb.from('calc_records').insert({
