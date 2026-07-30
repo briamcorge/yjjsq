@@ -2143,6 +2143,8 @@ function recalculate() {
     const calcEndStr = calcEnd.toISOString().slice(0,10);
     const totalDays = days360(calcStart, calcEnd);
     html += `<strong>${calcLabel}明细</strong> <span style="font-size:11px;">${calcStartStr} ~ ${calcEndStr}（${totalDays}天）</span>`;
+    const propId = document.getElementById('ldPropertyId').value;
+    if (propId) html += `<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">房源编号：${escHtml(propId)}</div>`;
   }
 
   if (tenantIncomeDetails.length > 0) {
@@ -2182,8 +2184,15 @@ function recalculate() {
     // Monthly diff
     const diffTenantRent = tenants.reduce((sum, t) => sum + (t.includeInDiff !== false ? t.rent : 0), 0);
     const diffColor = diff >= 0 ? 'var(--success)' : 'var(--danger)';
-    html += `<div style="font-size:12px;font-weight:400;margin-top:4px;color:var(--text-secondary);">`;
-    html += `月差价：计入租客（${tenants.filter(t=>t.includeInDiff!==false).map(t=>t.label).join('')}）${fmt(diffTenantRent)} − 业主${fmt(landlordRent)} = <span style="color:${diffColor};font-weight:600;">${fmt(diff)}</span>`;
+    const diffTenants = tenants.filter(t => t.includeInDiff !== false);
+    html += `<div style="border-top:1px solid var(--border);padding-top:6px;margin-top:6px;">`;
+    html += `<div style="font-size:12px;font-weight:600;">月差价</div>`;
+    html += `<div style="font-size:12px;color:var(--text-secondary);">业主月租金：${fmt(landlordRent)}</div>`;
+    diffTenants.forEach(t => {
+      html += `<div style="font-size:12px;color:var(--text-secondary);">租客${t.label}月租金：${fmt(t.rent)}</div>`;
+    });
+    html += `<div style="font-size:12px;">计入差价租客：${diffTenants.length}户，月租金合计 <strong>${fmt(diffTenantRent)}</strong></div>`;
+    html += `<div style="font-size:12px;font-weight:600;">月差价 = ${fmt(diffTenantRent)} − ${fmt(landlordRent)} = <span style="color:${diffColor};">${fmt(diff)}</span></div>`;
     html += '</div>';
     html += '</div>';
   }
