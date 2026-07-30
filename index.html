@@ -1695,12 +1695,12 @@ function parseAmount(val) {
 // ========== NUMBER FORMAT ==========
 function fmt(num) {
   if (typeof num !== 'number' || isNaN(num)) return '0';
-  return num.toLocaleString('zh-CN', { maximumFractionDigits: 0 });
+  return String(Math.round(num));
 }
 // 日租金保留小数
 function fmtRate(num) {
   if (typeof num !== 'number' || isNaN(num)) return '0';
-  return num.toLocaleString('zh-CN', { maximumFractionDigits: 2 });
+  return num.toFixed(2);
 }
 
 function normalizeDate(str) {
