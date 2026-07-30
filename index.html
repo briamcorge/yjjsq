@@ -2179,6 +2179,12 @@ function recalculate() {
     const profitColor = netProfit >= 0 ? 'var(--success)' : 'var(--danger)';
     html += `<div style="border-top:1px solid var(--border);padding-top:6px;margin-top:6px;font-weight:600;">`;
     html += `净利润 = 收入${fmt(totalIncome)} − 支出${fmt(totalExpense)} = <span style="color:${profitColor};">${fmt(netProfit)}</span>`;
+    // Monthly diff
+    const diffTenantRent = tenants.reduce((sum, t) => sum + (t.includeInDiff !== false ? t.rent : 0), 0);
+    const diffColor = diff >= 0 ? 'var(--success)' : 'var(--danger)';
+    html += `<div style="font-size:12px;font-weight:400;margin-top:4px;color:var(--text-secondary);">`;
+    html += `月差价：计入租客（${tenants.filter(t=>t.includeInDiff!==false).map(t=>t.label).join('')}）${fmt(diffTenantRent)} − 业主${fmt(landlordRent)} = <span style="color:${diffColor};font-weight:600;">${fmt(diff)}</span>`;
+    html += '</div>';
     html += '</div>';
   }
 
