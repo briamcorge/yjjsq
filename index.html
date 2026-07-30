@@ -2147,68 +2147,47 @@ function recalculate() {
     html += `<strong>${calcLabel}明细</strong> <span style="font-size:11px;">${calcStartStr} ~ ${calcEndStr}（${totalDays}天）</span>`;
   }
 
-  // ── Income detail: table layout ──
+  // ── Income detail ──
   if (tenantIncomeDetails.length > 0) {
     hasDetail = true;
     html += '<div style="border-top:1px solid var(--border);padding-top:6px;margin-top:6px;">';
     tenantIncomeDetails.forEach(d => {
       const total = d.quarterRent + d.cleaningFee;
-      html += `<div style="font-size:12px;display:flex;gap:4px;">`;
-      html += `<span style="min-width:60px;">租客${d.label}</span>`;
-      html += `<span style="color:var(--text-secondary);">${d.isProRated ? d.overlapDays+'天' : '3个月'}</span>`;
-      html += `<span style="margin-left:auto;text-align:right;min-width:60px;">${fmt(d.quarterRent)}</span>`;
-      html += `<span style="color:var(--text-muted);">+卫管${fmt(d.cleaningFee)}</span>`;
-      html += `<span style="margin-left:auto;text-align:right;min-width:50px;font-weight:500;">${fmt(total)}</span>`;
-      html += '</div>';
+      html += '<div style="font-size:12px;">• 租客' + d.label + '：' + d.overlapDays + '天' + fmt(d.quarterRent) + '+卫管' + d.cleaningFee + '=' + fmt(total) + '</div>';
     });
-    html += `<div style="display:flex;justify-content:space-between;font-weight:600;margin-top:4px;"><span>收入合计</span><span>${fmt(totalIncome)}</span></div>`;
+    html += '<div style="margin-top:3px;font-weight:600;">收入合计 ' + fmt(totalIncome) + '</div>';
     html += '</div>';
   }
 
-  // ── Expense detail: show as 业主租金 ──
+  // ── Expense detail ──
   if (rent1 > 0 || rent2 > 0) {
     hasDetail = true;
     html += '<div style="border-top:1px solid var(--border);padding-top:6px;margin-top:6px;">';
     if (rent1 > 0) {
-      html += `<div style="font-size:12px;display:flex;gap:4px;">`;
-      html += `<span style="min-width:60px;">业主租金</span>`;
-      html += `<span style="color:var(--text-secondary);">${days1}天</span>`;
-      html += `<span style="margin-left:auto;text-align:right;min-width:60px;">${fmt(dailyRate1*days1)}</span>`;
-      if (freeDays1 > 0) html += `<span style="color:var(--text-muted);">-免租${fmt(freeCost1)}</span>`;
-      html += `<span style="margin-left:auto;text-align:right;min-width:50px;font-weight:500;">${fmt(cost1)}</span>`;
-      html += '</div>';
+      html += '<div style="font-size:12px;">• 业主租金：' + days1 + '天' + fmt(dailyRate1*days1) + (freeDays1 > 0 ? ' -免租' + fmt(freeCost1) : '') + '=' + fmt(cost1) + '</div>';
     }
     if (rent2 > 0) {
-      html += `<div style="font-size:12px;display:flex;gap:4px;">`;
-      html += `<span style="min-width:60px;">业主租金</span>`;
-      html += `<span style="color:var(--text-secondary);">${days2}天</span>`;
-      html += `<span style="margin-left:auto;text-align:right;min-width:60px;">${fmt(dailyRate2*days2)}</span>`;
-      if (freeDays2 > 0) html += `<span style="color:var(--text-muted);">-免租${fmt(freeCost2)}</span>`;
-      html += `<span style="margin-left:auto;text-align:right;min-width:50px;font-weight:500;">${fmt(cost2)}</span>`;
-      html += '</div>';
+      html += '<div style="font-size:12px;">• 业主租金：' + days2 + '天' + fmt(dailyRate2*days2) + (freeDays2 > 0 ? ' -免租' + fmt(freeCost2) : '') + '=' + fmt(cost2) + '</div>';
     }
-    html += `<div style="display:flex;justify-content:space-between;font-weight:600;margin-top:4px;"><span>支出合计</span><span>${fmt(totalExpense)}</span></div>`;
+    html += '<div style="margin-top:3px;font-weight:600;">支出合计 ' + fmt(totalExpense) + '</div>';
     html += '</div>';
   }
 
   // ── Net profit + Monthly diff ──
   if (hasDetail && (totalIncome > 0 || totalExpense > 0)) {
     const profitColor = netProfit >= 0 ? 'var(--success)' : 'var(--danger)';
-    html += `<div style="border-top:1px solid var(--border);padding-top:6px;margin-top:6px;">`;
-    html += `<div style="font-size:12px;font-weight:600;">净利润 = 收入${fmt(totalIncome)} − 支出${fmt(totalExpense)} = <span style="color:${profitColor};">${fmt(netProfit)}</span></div>`;
+    html += '<div style="border-top:1px solid var(--border);padding-top:6px;margin-top:6px;">';
+    html += '<div style="font-size:12px;font-weight:600;">净利润 = 收入' + fmt(totalIncome) + ' − 支出' + fmt(totalExpense) + ' = <span style="color:' + profitColor + ';">' + fmt(netProfit) + '</span></div>';
     // Monthly diff
     const diffTenantRent = tenants.reduce((sum, t) => sum + (t.includeInDiff !== false ? t.rent : 0), 0);
     const diffColor = diff >= 0 ? 'var(--success)' : 'var(--danger)';
     const diffTenants = tenants.filter(t => t.includeInDiff !== false);
-    html += `<div style="margin-top:6px;padding-top:6px;border-top:1px dashed var(--border);">`;
-    html += `<div style="font-size:12px;font-weight:600;margin-bottom:4px;">月差价</div>`;
-    html += `<div style="font-size:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">`;
-    html += `<span style="color:var(--text-secondary);">业主月租：${fmt(landlordRent)}</span>`;
+    html += '<div style="margin-top:6px;padding-top:4px;border-top:1px dashed var(--border);font-size:12px;">';
+    html += '<strong>月差价</strong>  业主月租' + fmt(landlordRent);
     diffTenants.forEach(t => {
-      html += `<span style="color:var(--text-secondary);">${t.label}<span style="font-weight:500;">${fmt(t.rent)}</span></span>`;
+      html += '  ' + t.label + fmt(t.rent);
     });
-    html += '</div>';
-    html += `<div style="font-size:12px;font-weight:600;margin-top:2px;">月差价 = ${fmt(diffTenantRent)} − ${fmt(landlordRent)} = <span style="color:${diffColor};">${fmt(diff)}</span></div>`;
+    html += ' = ' + fmt(diffTenantRent) + ' − ' + fmt(landlordRent) + ' = <span style="color:' + diffColor + ';font-weight:600;">' + fmt(diff) + '</span>';
     html += '</div>';
     html += '</div>';
   }
