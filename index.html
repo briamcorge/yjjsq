@@ -2589,7 +2589,7 @@ async function loadHistory() {
 }
 
 async function loadRecord(id) {
-  const { data, error } = await sb.from('calc_records').select('detail, state_json').eq('id', id).single();
+  const { data, error } = await sb.from('calc_records').select('detail, state_json, income, expense, profit').eq('id', id).single();
   if (error || !data) return;
 
   // Restore form state if available
@@ -2639,12 +2639,15 @@ async function loadRecord(id) {
   toggleLock();
 
   // 恢复主结果区（收入/支出/利润），与明细一致
-  document.getElementById('resIncome').textContent = fmt(r.income);
-  document.getElementById('resExpense').textContent = fmt(r.expense);
-  document.getElementById('resProfit').textContent = fmt(r.profit);
+  const recIncome = parseAmount(data.income);
+  const recExpense = parseAmount(data.expense);
+  const recProfit = parseAmount(data.profit);
+  document.getElementById('resIncome').textContent = fmt(recIncome);
+  document.getElementById('resExpense').textContent = fmt(recExpense);
+  document.getElementById('resProfit').textContent = fmt(recProfit);
   document.getElementById('resIncome').style.color = '#059669';
   document.getElementById('resExpense').style.color = '#DC2626';
-  document.getElementById('resProfit').style.color = r.profit > 0 ? 'var(--success)' : r.profit < 0 ? 'var(--danger)' : 'var(--text)';
+  document.getElementById('resProfit').style.color = recProfit > 0 ? 'var(--success)' : recProfit < 0 ? 'var(--danger)' : 'var(--text)';
 
   // Show detail text
   const detailEl = document.getElementById('detail360');
