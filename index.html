@@ -994,7 +994,7 @@ button:disabled {
 
   <!-- Header -->
   <div class="header">
-    <h1>业绩计算器 <span style="font-size:12px;color:var(--text-muted);font-weight:400;">v1.15</span></h1>
+    <h1>业绩计算器 <span style="font-size:12px;color:var(--text-muted);font-weight:400;">v1.16</span></h1>
   </div>
 
   <!-- Section: Upload -->
@@ -1501,6 +1501,8 @@ function detectPageType(text) {
   // 优先检测租客关键词（租客页面也有"收房价格"，不能先检测房东）
   if (n.includes('租客信息') || n.includes('出房价格')) return 'tenant';
   if (n.includes('租客姓名') || n.includes('租客意向')) return 'tenant';
+  // 租客租赁信息区特征（租客页专有，房东页无）
+  if (n.includes('租赁期限') && n.includes('合同性质')) return 'tenant';
   if (n.includes('房东信息') || n.includes('房东姓名')) return 'landlord';
   if (n.includes('收房价格') && !n.includes('出房价格')) return 'landlord';
   return 'unknown';
@@ -1523,14 +1525,58 @@ function extractPropertyId(text) {
   const idx = text.indexOf('房源编号');
   if (idx === -1) return '';
   const after = text.substring(idx, idx + 80);
-  // Take everything after the label until newline 
-  let m = after.match(/房源编号[：:]*\s*([^\n\r]+)/);
-  if (m) {
-    let id = m[1].trim();
-    // Remove trailing noise (punctuation)
-    id = id.replace(/[，,。.]$/, '');
-    return id;
+  // 只抓编号本体（字母/数字/横杠），防止表格同排数据（房东姓名、身份证等）被整串抓入
+  let m = after.match(/房源编号[：:]*\s*([A-Za-z0-9\-_]+)/);
+  if (m) return m[1].trim();
+  return '';
+}
+
+// ========== ROOM NUMBER EXTRACTION ==========
+// 房间号 = 门牌号【X】/ 页面标题【X】 中的单字母（A-Z），用于标识同一房源下的不同房间。
+// 只从【门牌号】和【页面标题】两处提取，OCR 容错；无法安全判断时返回空，不猜测、不编造。
+function extractRoomNo(text) {
+  const n = normalizeOcrText(text);
+  if (!n) return '';
+
+  // 字母清洗：OCR 常见误识 + 去尾随标点，只保留单个 A-Z
+  function cleanLetter(s) {
+    if (!s) return '';
+    s = s.trim();
+    s = s.replace(/Λ/g, 'A').replace(/λ/g, 'A'); // OCR 把 A 识别成 Λ
+    s = s.replace(/[，,。.；;：:！!、·\-—–]/g, ''); // 去尾随标点/分隔符
+    const m = s.match(/[A-Za-z]/);
+    return m ? m[0].toUpperCase() : '';
   }
+
+  // 从一段文本中提取括号【X】或（X）里的内容并取字母
+  function fromBracket(str) {
+    if (!str) return '';
+    const m = str.match(/[【（]\s*([^】）]{1,12})\s*[】）]/); // normalize 后括号已统一为【】（）
+    if (m) return cleanLetter(m[1]);
+    return '';
+  }
+
+  // 1) 门牌号字段（标准字段，最优先）
+  const mpIdx = n.indexOf('门牌号');
+  if (mpIdx !== -1) {
+    const after = n.substring(mpIdx, mpIdx + 60);
+    let room = fromBracket(after);
+    // 无括号兜底：如 "701 A"、"701-A"、"701A"（紧跟在房号数字后的字母）
+    if (!room) {
+      const m = after.match(/(\d{2,4})\s*[\-—–]?\s*([A-Za-z])/);
+      if (m) room = cleanLetter(m[2]);
+    }
+    if (room) return room;
+  }
+
+  // 2) 页面标题（首个括号块），如 "北京市海淀区宣海家园2幢5单元7层701【A】"
+  const titleRoom = fromBracket(n);
+  if (titleRoom) return titleRoom;
+
+  // 3) "租客信息【X】" 标签（旧截图兜底）
+  const tb = n.match(/租客信息[【（]\s*([A-Za-z]+)\s*[】）]/);
+  if (tb) return cleanLetter(tb[1]);
+
   return '';
 }
 
@@ -1538,11 +1584,15 @@ function extractPropertyId(text) {
 function parseTenantData(text) {
   const n = normalizeOcrText(text);
 
+  // 房间号优先从门牌号/页面标题提取（独立于租客自动编号）
+  const roomNo = extractRoomNo(n);
 
   // Extract tenant label from "租客信息【A】" or similar
   let label = '';
   const labelMatch = n.match(/租客信息[【（]\s*([A-Za-z0-9一二三四五六七八九十]+)\s*[】）]/);
   if (labelMatch) label = labelMatch[1];
+  // 有识别出的房间号时，用它作为租客标号
+  if (roomNo) label = roomNo;
 
   // Extract cleaning fee - handle both formats:
   // 1. Inline: "卫管费 ¥706.00元" → extractNumberAfter works
@@ -1607,6 +1657,7 @@ function parseTenantData(text) {
   return {
     name: extractNameAfter(n, '租客姓名') || extractNameAfter(n, '客户姓名') || (label ? '租客' + label : ''),
     label: label || '',
+    roomNo: roomNo || '',
     rent: rentVal,
     cleaningFee: cleaningFee.toString(),
     startDate: extractTenantDate(n),
@@ -1773,10 +1824,25 @@ function parseAllResults() {
 // ========== TENANT MANAGEMENT ==========
 function createTenant(data) {
   tenantCounter++;
-  const label = String.fromCharCode(64 + tenantCounter); // A, B, C...
+  // 识别到房间号（如 C）优先作为租客标号；未识别到则按顺序自动编号 A、B、C...
+  // 同房间号多个租客（同房间先后不同租客/OCR重复）：roomNo 保持原值，由 reassignRoomNoLabels()
+  // 按起租时间先后编号为 A1、A2、A3...
+  const roomNo = (data.roomNo || '').toString().trim().toUpperCase();
+  let label = '';
+  if (roomNo) {
+    label = roomNo;
+  } else {
+    // 自动编号：跳过已被房间号/标号占用的字母
+    const used = new Set();
+    tenants.forEach(t => { used.add((t.roomNo || t.label).toUpperCase()); });
+    let n = 1;
+    while (used.has(String.fromCharCode(64 + n))) n++;
+    label = String.fromCharCode(64 + n);
+  }
   return {
     id: Date.now() + Math.random(),
     label: label,
+    roomNo: roomNo,
     name: data.name || '',
     rent: parseAmount(data.rent || '0'),
     cleaningFee: parseAmount(data.cleaningFee || '0'),
@@ -1784,6 +1850,41 @@ function createTenant(data) {
     endDate: normalizeDate(data.endDate || ''),
     includeInDiff: data.includeInDiff !== false,
   };
+}
+
+// 同房间号多租客时按起租时间先后编号：组内 1 人 → A；多人 → A1、A2、A3...
+function reassignRoomNoLabels() {
+  const groups = {};
+  tenants.forEach(t => {
+    if (!t.roomNo) return;
+    const key = t.roomNo.toUpperCase();
+    (groups[key] = groups[key] || []).push(t);
+  });
+  Object.keys(groups).forEach(key => {
+    const sorted = groups[key].slice().sort((a, b) => {
+      const da = a.startDate || '9999-99-99'; // 无起租时间排最后
+      const db = b.startDate || '9999-99-99';
+      return da.localeCompare(db);
+    });
+    if (sorted.length === 1) {
+      sorted[0].label = key;
+    } else {
+      sorted.forEach((t, i) => { t.label = key + (i + 1); });
+    }
+  });
+}
+
+// 无房间号的租客重新分配空闲字母（A-Z），跳过已被房间号占用的字母
+function reassignAutoLabels() {
+  const used = new Set();
+  tenants.forEach(t => { used.add((t.roomNo || t.label).toUpperCase()); });
+  let n = 1;
+  tenants.forEach(t => {
+    if (t.roomNo) return;
+    while (used.has(String.fromCharCode(64 + n))) n++;
+    t.label = String.fromCharCode(64 + n);
+    used.add(t.label.toUpperCase());
+  });
 }
 
 function addTenant() {
@@ -1806,17 +1907,18 @@ function addTenantFromData(data) {
   }
   const t = createTenant(data);
   tenants.push(t);
+  // 若识别到房间号且有起租时间，重新按起租时间排序并编号（A1、A2...）
+  reassignRoomNoLabels();
   renderTenants();
 }
 
 function deleteTenant(index) {
   if (confirm(`确定删除租客${tenants[index].label}吗？`)) {
     tenants.splice(index, 1);
-    // Re-assign labels
-    tenants.forEach((t, i) => {
-      t.label = String.fromCharCode(65 + i);
-    });
-    tenantCounter = tenants.length;
+    // 有房间号的按起租时间重新编号；无房间号的重新分配空闲字母
+    reassignRoomNoLabels();
+    reassignAutoLabels();
+    tenantCounter = tenants.length; // 保持计数与租客数一致
     renderTenants();
     showToast('租客已删除', 'info');
   }
@@ -1858,6 +1960,7 @@ function updateTenantField(index, field, value) {
   } else {
     tenants[index][field] = value;
   }
+  if (field === 'startDate') reassignRoomNoLabels(); // 起租时间变化 → 重新排序编号
   if (field === 'startDate' || field === 'endDate' || field === 'rent' || field === 'cleaningFee') {
     renderTenants();
   }
@@ -2375,6 +2478,7 @@ function showToast(message, type = 'info') {
 const SB_URL = 'https://nskatipsgtspvvpsrhzs.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5za2F0aXBzZ3RzcHZ2cHNyaHpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM4NTgzMzQsImV4cCI6MjA5OTQzNDMzNH0.B4HvpVghYUmtWbPtClD6VZlk2yI74Utik3vx6imrcpc';
 const sb = supabase.createClient(SB_URL, SB_KEY);
+let lastSavedSignature = null; // 最近一次保存/加载的表单签名，用于重复保存防护
 
 async function saveCalcRecord() {
   const propertyId = document.getElementById('ldPropertyId').value || '';
@@ -2402,6 +2506,15 @@ async function saveCalcRecord() {
     tenants: tenants.map(t => ({ ...t }))
   };
 
+  // 重复保存防护：与最近一次保存的状态完全一致（或曾加载的记录状态一致）则跳过，
+  // 避免"点一次计算=存一条"导致历史记录爆炸。
+  const signature = JSON.stringify(state);
+  if (signature === lastSavedSignature) {
+    document.getElementById('historyStatus').className = 'history-status ok';
+    document.getElementById('historyStatus').textContent = '已保存(未变化)';
+    return;
+  }
+
   // Calculate monthly difference
   const landlordRent = parseAmount(document.getElementById('ldRent1').value || '0');
   const tenantTotalRent = tenants.reduce((sum, t) => sum + (t.includeInDiff !== false ? t.rent : 0), 0);
@@ -2417,6 +2530,7 @@ async function saveCalcRecord() {
     document.getElementById('historyStatus').className = 'history-status err';
     document.getElementById('historyStatus').textContent = '保存失败';
   } else {
+    lastSavedSignature = signature; // 记录签名，下次计算未变化则不再保存
     document.getElementById('historyStatus').className = 'history-status ok';
     document.getElementById('historyStatus').textContent = '已保存';
     loadHistory();
@@ -2468,8 +2582,8 @@ async function loadHistory() {
       '<button class="history-del" onclick="event.stopPropagation();deleteRecord(\'' + r.id + '\')" title="删除">×</button>' +
     '</div>';
   }).join('');
-  // Add show more toggle if there are 10+ records
-  if (data.length >= 10 && !historyKeyword) {
+  // Add show more toggle if there are 10+ records (search 时也提供，避免搜索结果被截断在10条)
+  if (data.length >= 10) {
     listEl.innerHTML += '<div style="text-align:center;padding:8px;"><button id="historyShowAllBtn" class="btn btn-small" onclick="toggleHistoryShowAll()" style="padding:4px 16px;border:1px solid var(--border);background:#fff;color:var(--primary);border-radius:4px;cursor:pointer;font-size:12px;">' + (historyShowAll ? '收起' : '显示更多') + '</button></div>';
   }
 }
@@ -2504,6 +2618,17 @@ async function loadRecord(id) {
       tenantCounter = s.tenantCounter || 0;
       tenants = (s.tenants || []).map(t => ({ ...t, includeInDiff: t.includeInDiff !== false }));
       renderTenants();
+      // 重建签名：与保存时 saveCalcRecord 的 state 完全一致，
+      // 这样"打开历史 → 不修改 → 点计算"不会重复保存一条。
+      lastSavedSignature = JSON.stringify({
+        propertyId: s.propertyId || '',
+        rent1: s.rent1 || '', freeDays1: s.freeDays1 || '', startDate1: s.startDate1 || '', endDate1: s.endDate1 || '',
+        rent2: s.rent2 || '', freeDays2: s.freeDays2 || '', startDate2: s.startDate2 || '', endDate2: s.endDate2 || '',
+        syncEndDate: s.syncEndDate || false, firstQuarter: s.firstQuarter || false,
+        contract2Visible: s.contract2Visible === true,
+        tenantCounter: s.tenantCounter || 0,
+        tenants: tenants.map(t => ({ ...t }))
+      });
     } catch(e) {
       console.error('Failed to restore state', e);
     }
@@ -2512,6 +2637,14 @@ async function loadRecord(id) {
   // Auto-lock after restoring history data
   document.getElementById('lockToggle').checked = true;
   toggleLock();
+
+  // 恢复主结果区（收入/支出/利润），与明细一致
+  document.getElementById('resIncome').textContent = fmt(r.income);
+  document.getElementById('resExpense').textContent = fmt(r.expense);
+  document.getElementById('resProfit').textContent = fmt(r.profit);
+  document.getElementById('resIncome').style.color = '#059669';
+  document.getElementById('resExpense').style.color = '#DC2626';
+  document.getElementById('resProfit').style.color = r.profit > 0 ? 'var(--success)' : r.profit < 0 ? 'var(--danger)' : 'var(--text)';
 
   // Show detail text
   const detailEl = document.getElementById('detail360');

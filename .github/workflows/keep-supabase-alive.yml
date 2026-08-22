@@ -1,0 +1,29 @@
+# Supabase 免费版规则：项目 7 天无 API 请求会自动暂停。
+# 本工作流每天访问一次 REST API，保持项目活跃，避免再次被暂停。
+#
+# 注意：
+# - anon key 本身就是公开给浏览器用的（index.html 里也有），
+#   放在这里不算泄露。若日后启用 RLS 以外的敏感操作，请改为
+#   GitHub Secrets 存 key。
+# - Supabase 允许的最长间隔是 7 天，这里每天跑一次（间隔 1 天），
+#   即使某天失败还有充足余量。
+name: Keep Supabase Alive
+
+on:
+  schedule:
+    # 每周一、周四 北京时间 06:00 (UTC 22:00)，间隔最多 4 天 < 7 天阈值
+    - cron: '0 22 * * 1,4'
+  workflow_dispatch: {} # 支持手动触发
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase REST API
+        run: |
+          curl -sf -o /dev/null -w "HTTP %{http_code}\n" \
+            -H "apikey: $SB_KEY" \
+            -H "Authorization: Bearer $SB_KEY" \
+            "https://nskatipsgtspvvpsrhzs.supabase.co/rest/v1/calc_records?select=id&limit=1"
+        env:
+          SB_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5za2F0aXBzZ3RzcHZ2cHNyaHpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM4NTgzMzQsImV4cCI6MjA5OTQzNDMzNH0.B4HvpVghYUmtWbPtClD6VZlk2yI74Utik3vx6imrcpc
