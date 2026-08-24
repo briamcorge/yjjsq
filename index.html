@@ -994,7 +994,7 @@ button:disabled {
 
   <!-- Header -->
   <div class="header">
-    <h1>业绩计算器 <span style="font-size:12px;color:var(--text-muted);font-weight:400;">v1.18</span></h1>
+    <h1>业绩计算器 <span style="font-size:12px;color:var(--text-muted);font-weight:400;">v1.19</span></h1>
   </div>
 
   <!-- Section: Upload -->
@@ -2495,6 +2495,7 @@ async function saveCalcRecord() {
     startDate2: document.getElementById('ldStartDate2').value,
     endDate2: document.getElementById('ldEndDate2').value,
       firstQuarter: document.getElementById('firstQuarter').checked,
+    originalEndDate: originalEndDate,
     contract2Visible: document.getElementById('contract2Box').style.display !== 'none',
     tenantCounter: tenantCounter,
     tenants: tenants.map(t => ({ ...t }))
@@ -2600,6 +2601,7 @@ async function loadRecord(id) {
       document.getElementById('ldStartDate2').value = s.startDate2 || '';
       document.getElementById('ldEndDate2').value = s.endDate2 || '';
       document.getElementById('firstQuarter').checked = s.firstQuarter || false;
+      originalEndDate = s.originalEndDate || '';
       if (s.contract2Visible) {
         document.getElementById('contract2Box').style.display = '';
         document.getElementById('addContract2Btn').style.display = 'none';
@@ -2618,6 +2620,7 @@ async function loadRecord(id) {
         rent1: s.rent1 || '', freeDays1: s.freeDays1 || '', startDate1: s.startDate1 || '', endDate1: s.endDate1 || '',
         rent2: s.rent2 || '', freeDays2: s.freeDays2 || '', startDate2: s.startDate2 || '', endDate2: s.endDate2 || '',
         firstQuarter: s.firstQuarter || false,
+        originalEndDate: s.originalEndDate || '',
         contract2Visible: s.contract2Visible === true,
         tenantCounter: s.tenantCounter || 0,
         tenants: tenants.map(t => ({ ...t }))
