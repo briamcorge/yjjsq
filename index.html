@@ -994,7 +994,7 @@ button:disabled {
 
   <!-- Header -->
   <div class="header">
-    <h1>业绩计算器 <span style="font-size:12px;color:var(--text-muted);font-weight:400;">v1.17</span></h1>
+    <h1>业绩计算器 <span style="font-size:12px;color:var(--text-muted);font-weight:400;">v1.18</span></h1>
   </div>
 
   <!-- Section: Upload -->
@@ -1072,7 +1072,7 @@ button:disabled {
               <span class="info-label" style="min-width:auto;white-space:nowrap;">租期</span>
               <input class="info-input date-input" id="ldStartDate1" type="text" placeholder="起始" maxlength="10" onblur="this.value=normalizeDateInput(this.value)">
               <span style="font-size:12px;color:var(--text-secondary);">~</span>
-              <input class="info-input date-input" id="ldEndDate1" type="text" placeholder="结束" maxlength="10" onblur="this.value=normalizeDateInput(this.value);syncEndDates()">
+              <input class="info-input date-input" id="ldEndDate1" type="text" placeholder="结束" maxlength="10" onblur="this.value=normalizeDateInput(this.value)">
             </div>
           </div>
           <!-- Contract 2 -->
@@ -1096,12 +1096,7 @@ button:disabled {
         <div style="text-align:center;padding:4px 0 0;">
           <button class="btn btn-small btn-secondary" id="addContract2Btn" onclick="showContract2()" style="font-size:11px;padding:3px 12px;">+ 第二份合同</button>
         </div>
-        <div class="info-row" style="flex-wrap:wrap;gap:4px 6px;align-items:center;">
-          <label style="font-size:10px;color:var(--primary);display:flex;align-items:center;gap:2px;cursor:pointer;white-space:nowrap;">
-            <input type="checkbox" id="syncEndDate" onchange="syncEndDates()" style="cursor:pointer;">
-            同步到期日
-          </label>
-        </div>
+
       </div>
     </div>
   </div>
@@ -1985,6 +1980,8 @@ function renderTenants() {
     container.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px;">暂无租客，请上传截图识别或手动添加</div>';
     return;
   }
+  // 单租客时强制计入差价（复选框已隐藏，无法手动切换）
+  if (tenants.length === 1) tenants[0].includeInDiff = true;
   container.innerHTML = tenants.map((t, i) => `
     <div class="tenant-card">
       <div class="tenant-card-header">
@@ -2030,9 +2027,9 @@ function renderTenants() {
           <input class="ti-input date-input" type="text" value="${t.endDate || ''}" placeholder="结束" maxlength="10" onchange="updateTenantField(${i},'endDate',this.value)">
         </div>
         ${t.rent > 0 || t.cleaningFee > 0 ? `<div style="font-size:12px;color:var(--text-secondary);">收到: ${getTenantReceivedText(t)}</div>` : ''}
-        <label style="font-size:11px;color:var(--text-muted);white-space:nowrap;margin-left:auto;cursor:pointer;" title="勾选则计入月差价">
+        ${tenants.length > 1 ? `<label style="font-size:11px;color:var(--text-muted);white-space:nowrap;margin-left:auto;cursor:pointer;" title="勾选则计入月差价">
           <input type="checkbox" onchange="toggleTenantDiff(${i})" ${t.includeInDiff !== false ? 'checked' : ''} style="cursor:pointer;vertical-align:middle;"> 差价
-        </label>
+        </label>` : ''}
       </div>
     </div>
   `).join('');
@@ -2049,11 +2046,10 @@ function days360(start, end) {
   return diff + 1; // inclusive: count both start and end day
 }
 function syncEndDates() {
-  const checkbox = document.getElementById('syncEndDate');
   // Prefer contract 2's end date as the overall end; fall back to contract 1
   let endDate = document.getElementById('ldEndDate2').value;
   if (!endDate) endDate = document.getElementById('ldEndDate1').value;
-  if (!checkbox.checked || !endDate) return;
+  if (!endDate) return;
   tenants.forEach(t => {
     t.endDate = endDate;
   });
@@ -2080,7 +2076,7 @@ function toggleFirstQuarter() {
   } else {
     endDateInput.value = originalEndDate;
   }
-  if (document.getElementById('syncEndDate').checked) {
+  if (checkbox.checked) {
     syncEndDates();
   }
 }
@@ -2402,7 +2398,6 @@ function resetAll() {
   document.getElementById('ldFreeDays2').value = '';
   document.getElementById('ldStartDate2').value = '';
   document.getElementById('ldEndDate2').value = '';
-  document.getElementById('syncEndDate').checked = true;
   document.getElementById('firstQuarter').checked = false;
   originalEndDate = '';
   // Hide contract 2
@@ -2499,7 +2494,6 @@ async function saveCalcRecord() {
     freeDays2: document.getElementById('ldFreeDays2').value,
     startDate2: document.getElementById('ldStartDate2').value,
     endDate2: document.getElementById('ldEndDate2').value,
-      syncEndDate: document.getElementById('syncEndDate').checked,
       firstQuarter: document.getElementById('firstQuarter').checked,
     contract2Visible: document.getElementById('contract2Box').style.display !== 'none',
     tenantCounter: tenantCounter,
@@ -2605,7 +2599,6 @@ async function loadRecord(id) {
       document.getElementById('ldFreeDays2').value = s.freeDays2 || '';
       document.getElementById('ldStartDate2').value = s.startDate2 || '';
       document.getElementById('ldEndDate2').value = s.endDate2 || '';
-      document.getElementById('syncEndDate').checked = s.syncEndDate || false;
       document.getElementById('firstQuarter').checked = s.firstQuarter || false;
       if (s.contract2Visible) {
         document.getElementById('contract2Box').style.display = '';
@@ -2624,7 +2617,7 @@ async function loadRecord(id) {
         propertyId: s.propertyId || '',
         rent1: s.rent1 || '', freeDays1: s.freeDays1 || '', startDate1: s.startDate1 || '', endDate1: s.endDate1 || '',
         rent2: s.rent2 || '', freeDays2: s.freeDays2 || '', startDate2: s.startDate2 || '', endDate2: s.endDate2 || '',
-        syncEndDate: s.syncEndDate || false, firstQuarter: s.firstQuarter || false,
+        firstQuarter: s.firstQuarter || false,
         contract2Visible: s.contract2Visible === true,
         tenantCounter: s.tenantCounter || 0,
         tenants: tenants.map(t => ({ ...t }))
