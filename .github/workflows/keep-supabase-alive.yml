@@ -11,8 +11,8 @@ name: Keep Supabase Alive
 
 on:
   schedule:
-    # 每周一、周四 北京时间 06:00 (UTC 22:00)，间隔最多 4 天 < 7 天阈值
-    - cron: '0 22 * * 1,4'
+    # 每天 北京时间 06:00 (UTC 22:00) 运行一次，间隔 1 天，远低于 7 天阈值
+    - cron: '0 22 * * *'
   workflow_dispatch: {} # 支持手动触发
 
 jobs:
