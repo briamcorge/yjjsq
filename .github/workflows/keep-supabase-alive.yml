@@ -22,7 +22,7 @@ jobs:
   keepalive:
     runs-on: ubuntu-latest
     steps:
-      - name: Keepalive: write + read
+      - name: "Keepalive: write + read"
         run: |
           echo "== 1/2 write keepalive =="
           curl -sf -o /dev/null -w "WRITE HTTP %{http_code}\n" \
